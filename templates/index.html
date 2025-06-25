@@ -2094,20 +2094,34 @@
             error.style.display = 'none';
             predictBtn.disabled = true;
 
-            // Simulate neural network processing delay
-            setTimeout(() => {
-                const stockData = stockDatabase[symbol];
+            try {
+                // Call the backend API for real predictions
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ symbol: symbol })
+                });
 
-                if (!stockData) {
-                    showError(`Stock symbol "${symbol}" not found in our database. Please try a different symbol.`);
+                const data = await response.json();
+
+                if (response.ok && !data.error) {
+                    // Show the real prediction results
+                    showResults(data);
                 } else {
-                    const prediction = generatePrediction(symbol, stockData);
-                    showResults(prediction);
+                    // Show error message
+                    showError(data.error || 'Failed to get prediction');
                 }
 
+            } catch (error) {
+                console.error('Prediction error:', error);
+                showError('Network error. Please check your connection and try again.');
+            } finally {
+                // Hide loading state
                 loading.style.display = 'none';
                 predictBtn.disabled = false;
-            }, 3000); // 3 second delay to simulate complex AI processing
+            }
         }
 
         function createPriceChart(historical, prediction, containerId) {
@@ -2212,6 +2226,8 @@
         }
 
         function showResults(data) {
+            console.log('Showing results for data:', data); // Debug log
+
             const changeClass = data.expected_change_percent > 0 ? 'positive' :
                                data.expected_change_percent < 0 ? 'negative' : 'neutral';
 
@@ -2294,15 +2310,15 @@
                     <div class="indicators-grid">
                         <div class="indicator">
                             <span class="indicator-label">RSI (14):</span>
-                            <span class="indicator-value">${data.technical_indicators.rsi}</span>
+                            <span class="indicator-value">${data.technical_indicators?.rsi?.toFixed(2) || 'N/A'}</span>
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">20-Day SMA:</span>
-                            <span class="indicator-value">$${data.technical_indicators.sma_20}</span>
+                            <span class="indicator-value">$${data.technical_indicators?.sma_20?.toFixed(2) || 'N/A'}</span>
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">50-Day SMA:</span>
-                            <span class="indicator-value">$${data.technical_indicators.sma_50}</span>
+                            <span class="indicator-value">$${data.technical_indicators?.sma_50?.toFixed(2) || 'N/A'}</span>
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">MACD:</span>
@@ -2322,7 +2338,7 @@
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">Volatility:</span>
-                            <span class="indicator-value">${data.technical_indicators.volatility}%</span>
+                            <span class="indicator-value">${data.technical_indicators?.volatility?.toFixed(2) || 'N/A'}%</span>
                         </div>
                     </div>
 
@@ -2340,10 +2356,15 @@
 
             results.style.display = 'block';
 
-            // Create charts after DOM is updated
+            // Create charts after DOM is updated (with error handling)
             setTimeout(() => {
-                createPriceChart(data.historical_data, data.prediction_data, 'priceChart');
-                createVolumeChart(data.historical_data, data.symbol, 'volumeChart');
+                try {
+                    // For now, skip chart creation since backend doesn't provide chart data yet
+                    // TODO: Add chart data generation in backend
+                    console.log('Chart creation skipped - backend integration in progress');
+                } catch (error) {
+                    console.error('Error creating charts:', error);
+                }
             }, 100);
         }
 

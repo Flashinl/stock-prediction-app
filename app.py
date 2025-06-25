@@ -858,18 +858,24 @@ def index():
 @app.route('/api/predict', methods=['POST'])
 def predict():
     try:
+        logger.info("Prediction API called")
         data = request.get_json()
+        logger.info(f"Request data: {data}")
+
         symbol = data.get('symbol', '').strip().upper()
+        logger.info(f"Processing symbol: {symbol}")
 
         if not symbol:
             return jsonify({"error": "Stock symbol is required"}), 400
 
         prediction = predictor.predict_stock_movement(symbol)
+        logger.info(f"Prediction result: {prediction}")
+
         return jsonify(prediction)
 
     except Exception as e:
-        logger.error(f"API error: {e}")
-        return jsonify({"error": "Internal server error"}), 500
+        logger.error(f"API error: {e}", exc_info=True)
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 # Additional routes for the advanced frontend features
 @app.route('/api/watchlist', methods=['GET', 'POST', 'DELETE'])
