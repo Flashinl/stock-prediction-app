@@ -1414,6 +1414,7 @@
                         <label for="signinPassword">Password:</label>
                         <input type="password" id="signinPassword" required>
                     </div>
+                    <div id="signinError" class="error" style="display: none;"></div>
                     <button type="submit" class="predict-btn" style="width: 100%; margin-top: 20px;">
                         <i class="fas fa-sign-in-alt"></i> Sign In
                     </button>
@@ -1442,10 +1443,38 @@
                         <label for="signupConfirmPassword">Confirm Password:</label>
                         <input type="password" id="signupConfirmPassword" required>
                     </div>
+                    <div id="signupError" class="error" style="display: none;"></div>
                     <button type="submit" class="predict-btn" style="width: 100%; margin-top: 20px;">
                         <i class="fas fa-user-plus"></i> Create Account
                     </button>
                 </form>
+            </div>
+        </div>
+
+        <!-- Email Verification Modal -->
+        <div id="verificationModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('verification')">&times;</span>
+                <h2><i class="fas fa-envelope-open"></i> Verify Your Email</h2>
+                <p style="margin-bottom: 20px; color: #ccc;">
+                    We've sent a 6-digit verification code to <strong id="verificationEmail"></strong>
+                </p>
+                <form id="verificationForm">
+                    <div class="form-group">
+                        <label for="verificationCode">Verification Code:</label>
+                        <input type="text" id="verificationCode" maxlength="6" placeholder="Enter 6-digit code" required
+                               style="text-align: center; font-size: 1.5rem; letter-spacing: 5px;">
+                    </div>
+                    <div id="verificationError" class="error" style="display: none;"></div>
+                    <button type="submit" class="predict-btn" style="width: 100%; margin-top: 20px;">
+                        <i class="fas fa-check"></i> Verify Email
+                    </button>
+                </form>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button id="resendCodeBtn" class="auth-btn" onclick="resendVerificationCode()" style="background: transparent; border: 1px solid #00ff88;">
+                        <i class="fas fa-redo"></i> Resend Code
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1571,10 +1600,22 @@
 
         function openModal(type) {
             document.getElementById(type + 'Modal').style.display = 'block';
+            // Clear any existing errors
+            const errorElement = document.getElementById(type + 'Error') ||
+                               document.querySelector(`#${type}Modal .error`);
+            if (errorElement) {
+                errorElement.style.display = 'none';
+            }
         }
 
         function closeModal(type) {
             document.getElementById(type + 'Modal').style.display = 'none';
+            // Clear any existing errors
+            const errorElement = document.getElementById(type + 'Error') ||
+                               document.querySelector(`#${type}Modal .error`);
+            if (errorElement) {
+                errorElement.style.display = 'none';
+            }
         }
 
         function showUserLoggedIn(user) {
@@ -1613,40 +1654,212 @@
         }
 
         // Form handlers
-        document.getElementById('signinForm').addEventListener('submit', function(e) {
+        document.getElementById('signinForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const email = document.getElementById('signinEmail').value;
             const password = document.getElementById('signinPassword').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
 
-            // Simulate authentication
-            const user = { name: email.split('@')[0], email: email };
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            currentUser = user;
-            showUserLoggedIn(user);
-            closeModal('signin');
-            showMainApp();
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Store user data
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    currentUser = data.user;
+                    showUserLoggedIn(data.user);
+                    closeModal('signin');
+                    showMainApp();
+
+                    // Reset form
+                    e.target.reset();
+                } else {
+                    // Show error
+                    showAuthError('signin', data.error || 'Login failed');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAuthError('signin', 'Network error. Please try again.');
+            } finally {
+                // Reset button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+            }
         });
 
-        document.getElementById('signupForm').addEventListener('submit', function(e) {
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const name = document.getElementById('signupName').value;
             const email = document.getElementById('signupEmail').value;
             const password = document.getElementById('signupPassword').value;
             const confirmPassword = document.getElementById('signupConfirmPassword').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
 
             if (password !== confirmPassword) {
-                alert('Passwords do not match!');
+                showAuthError('signup', 'Passwords do not match!');
                 return;
             }
 
-            // Simulate account creation
-            const user = { name: name, email: email };
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            currentUser = user;
-            showUserLoggedIn(user);
-            closeModal('signup');
-            showMainApp();
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Show verification modal
+                    closeModal('signup');
+                    showVerificationModal(data.user_id, email);
+
+                    // Reset form
+                    e.target.reset();
+                } else {
+                    // Show error
+                    showAuthError('signup', data.error || 'Registration failed');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAuthError('signup', 'Network error. Please try again.');
+            } finally {
+                // Reset button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account';
+            }
         });
+
+        // Verification form handler
+        document.getElementById('verificationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const code = document.getElementById('verificationCode').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+
+            if (!currentVerificationUserId) {
+                showAuthError('verification', 'Session expired. Please register again.');
+                return;
+            }
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying...';
+
+            try {
+                const response = await fetch('/api/auth/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: currentVerificationUserId,
+                        code: code
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Store user data and log in
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    currentUser = data.user;
+                    showUserLoggedIn(data.user);
+                    closeModal('verification');
+                    showMainApp();
+
+                    // Reset form
+                    e.target.reset();
+                    currentVerificationUserId = null;
+                } else {
+                    // Show error
+                    showAuthError('verification', data.error || 'Verification failed');
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                showAuthError('verification', 'Network error. Please try again.');
+            } finally {
+                // Reset button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-check"></i> Verify Email';
+            }
+        });
+
+        // Helper functions for authentication
+        let currentVerificationUserId = null;
+
+        function showVerificationModal(userId, email) {
+            currentVerificationUserId = userId;
+            document.getElementById('verificationEmail').textContent = email;
+            document.getElementById('verificationModal').style.display = 'block';
+            document.getElementById('verificationCode').focus();
+        }
+
+        function showAuthError(modalType, message) {
+            const errorElement = document.getElementById(modalType + 'Error') ||
+                               document.querySelector(`#${modalType}Modal .error`);
+            if (errorElement) {
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+
+                // Hide error after 5 seconds
+                setTimeout(() => {
+                    errorElement.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        async function resendVerificationCode() {
+            if (!currentVerificationUserId) {
+                showAuthError('verification', 'Session expired. Please register again.');
+                return;
+            }
+
+            const resendBtn = document.getElementById('resendCodeBtn');
+            resendBtn.disabled = true;
+            resendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+            try {
+                const response = await fetch('/api/auth/resend-verification', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_id: currentVerificationUserId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showAuthError('verification', 'New verification code sent!');
+                } else {
+                    showAuthError('verification', data.error || 'Failed to resend code');
+                }
+            } catch (error) {
+                console.error('Resend error:', error);
+                showAuthError('verification', 'Network error. Please try again.');
+            } finally {
+                resendBtn.disabled = false;
+                resendBtn.innerHTML = '<i class="fas fa-redo"></i> Resend Code';
+            }
+        }
 
         // Enter key support
         // Event listeners are now handled in initializeElements()
@@ -2137,12 +2350,16 @@
         window.addEventListener('click', function(event) {
             const signinModal = document.getElementById('signinModal');
             const signupModal = document.getElementById('signupModal');
+            const verificationModal = document.getElementById('verificationModal');
 
             if (event.target === signinModal) {
                 closeModal('signin');
             }
             if (event.target === signupModal) {
                 closeModal('signup');
+            }
+            if (event.target === verificationModal) {
+                closeModal('verification');
             }
         });
 
