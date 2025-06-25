@@ -573,12 +573,43 @@ class StockPredictor:
                 return "6-18 months"
     
     def get_stock_data(self, symbol, period="1y"):
-        """Fetch stock data using yfinance"""
+        """Fetch stock data using yfinance with enhanced error handling"""
         try:
+            symbol = symbol.upper().strip()
             stock = yf.Ticker(symbol)
-            data = stock.history(period=period)
+
+            # Try to get data with different periods if 1y fails
+            data = None
+            periods_to_try = [period, "6mo", "3mo", "1mo", "5d"]
+
+            for p in periods_to_try:
+                try:
+                    data = stock.history(period=p)
+                    if not data.empty:
+                        break
+                except:
+                    continue
+
+            if data is None or data.empty:
+                logger.warning(f"No historical data found for {symbol}")
+                return None, None
+
+            # Get stock info
             info = stock.info
+
+            # If info is empty or missing key data, try to get basic info
+            if not info or 'longName' not in info:
+                # For some penny stocks, info might be limited
+                info = {
+                    'longName': symbol,
+                    'symbol': symbol,
+                    'exchange': 'Unknown',
+                    'sector': 'Unknown',
+                    'industry': 'Unknown'
+                }
+
             return data, info
+
         except Exception as e:
             logger.error(f"Error fetching data for {symbol}: {e}")
             return None, None
@@ -625,18 +656,49 @@ class StockPredictor:
             if not indicators:
                 return {"error": "Insufficient data for analysis"}
             
-            # First check if stock exists in our database
-            stock_record = Stock.query.filter_by(symbol=symbol.upper()).first()
+            # Create or get stock record
+            symbol = symbol.upper().strip()
+            stock_record = Stock.query.filter_by(symbol=symbol).first()
 
             if not stock_record:
-                # Try to fetch and add the stock
-                stock_data = self.market_data_service.update_stock_data(symbol)
-                if stock_data:
-                    stock_record = Stock(**stock_data)
+                # Create stock record from yfinance data
+                current_price = indicators['current_price']
+                market_cap = info.get('marketCap')
+
+                stock_record = Stock(
+                    symbol=symbol,
+                    name=info.get('longName', symbol),
+                    exchange=info.get('exchange', 'Unknown'),
+                    sector=info.get('sector', 'Unknown'),
+                    industry=info.get('industry', 'Unknown'),
+                    market_cap=market_cap,
+                    current_price=current_price,
+                    volume=indicators.get('volume', 0),
+                    pe_ratio=info.get('trailingPE'),
+                    beta=info.get('beta'),
+                    dividend_yield=info.get('dividendYield'),
+                    is_penny_stock=current_price < 5.0,
+                    last_updated=datetime.utcnow()
+                )
+
+                try:
                     db.session.add(stock_record)
                     db.session.commit()
-                else:
-                    return {"error": f"Stock symbol '{symbol}' not found in our comprehensive database"}
+                    logger.info(f"Added new stock to database: {symbol}")
+                except Exception as e:
+                    db.session.rollback()
+                    logger.warning(f"Could not add stock to database: {e}")
+                    # Continue with analysis even if database save fails
+            else:
+                # Update existing record with fresh data
+                stock_record.current_price = indicators['current_price']
+                stock_record.volume = indicators.get('volume', stock_record.volume)
+                stock_record.last_updated = datetime.utcnow()
+                try:
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    logger.warning(f"Could not update stock in database: {e}")
 
             # Get stock data for analysis
             stock_data = stock_record.to_dict()
@@ -1085,6 +1147,36 @@ def get_stock_info(symbol):
     except Exception as e:
         logger.error(f"Error getting stock info for {symbol}: {e}")
         return jsonify({"error": "Failed to get stock information"}), 500
+
+@app.route('/api/test-stock/<symbol>')
+def test_stock_data(symbol):
+    """Test endpoint to check if we can fetch data for any stock"""
+    try:
+        # Test yfinance data fetching
+        stock = yf.Ticker(symbol.upper())
+        data = stock.history(period="5d")
+        info = stock.info
+
+        return jsonify({
+            "status": "success",
+            "symbol": symbol.upper(),
+            "has_data": not data.empty,
+            "data_points": len(data) if not data.empty else 0,
+            "has_info": bool(info),
+            "current_price": float(data['Close'].iloc[-1]) if not data.empty else None,
+            "company_name": info.get('longName', 'Unknown'),
+            "exchange": info.get('exchange', 'Unknown'),
+            "market_cap": info.get('marketCap'),
+            "is_penny_stock": float(data['Close'].iloc[-1]) < 5.0 if not data.empty else None
+        })
+
+    except Exception as e:
+        logger.error(f"Error testing stock data for {symbol}: {e}")
+        return jsonify({
+            "status": "error",
+            "symbol": symbol.upper(),
+            "error": str(e)
+        }), 500
 
 # Initialize database
 with app.app_context():
