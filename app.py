@@ -724,6 +724,12 @@ class StockPredictor:
             # Add risk warnings for penny stocks
             risk_warnings = self._generate_risk_warnings(stock_data, category)
 
+            # Generate chart data
+            chart_data = self._generate_chart_data(data, indicators, prediction_result)
+
+            # Generate enhanced AI reasoning
+            enhanced_reasoning = self._generate_enhanced_reasoning(stock_data, indicators, category, prediction_result, confidence)
+
             return {
                 "symbol": symbol.upper(),
                 "company_name": stock_record.name,
@@ -742,7 +748,11 @@ class StockPredictor:
                 "technical_indicators": indicators,
                 "risk_warnings": risk_warnings,
                 "analysis_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "reasoning": prediction_result['reasoning']
+                "reasoning": prediction_result['reasoning'],
+                "enhanced_reasoning": enhanced_reasoning,
+                "historical_data": chart_data['historical'],
+                "prediction_data": chart_data['prediction'],
+                "volume_data": chart_data['volume']
             }
             
         except Exception as e:
@@ -852,6 +862,194 @@ class StockPredictor:
                 warnings.append("✅ Established company: Lower risk profile compared to smaller stocks")
 
         return warnings
+
+    def _generate_chart_data(self, historical_data, indicators, prediction_result):
+        """Generate chart data for frontend visualization"""
+        try:
+            # Prepare historical data (last 30 days)
+            historical_data = historical_data.tail(30).copy()
+            historical_chart_data = []
+
+            for date, row in historical_data.iterrows():
+                historical_chart_data.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'price': round(float(row['Close']), 4),
+                    'volume': int(row['Volume']) if not pd.isna(row['Volume']) else 0
+                })
+
+            # Generate prediction data (next 30 days)
+            current_price = indicators['current_price']
+            target_price = prediction_result['target_price']
+            prediction_chart_data = []
+
+            # Create prediction timeline based on timeframe
+            prediction_days = 30  # Default to 30 days for visualization
+
+            for i in range(1, prediction_days + 1):
+                # Gradual progression towards target price with some volatility
+                progress = i / prediction_days
+
+                # Add some realistic volatility
+                volatility = np.random.normal(0, 0.02)  # 2% daily volatility
+
+                # Calculate predicted price with smooth progression
+                predicted_price = current_price + (target_price - current_price) * progress + (current_price * volatility)
+
+                # Ensure price doesn't go negative
+                predicted_price = max(predicted_price, current_price * 0.1)
+
+                future_date = datetime.now() + timedelta(days=i)
+                prediction_chart_data.append({
+                    'date': future_date.strftime('%Y-%m-%d'),
+                    'price': round(predicted_price, 4)
+                })
+
+            # Generate volume data (last 30 days)
+            volume_chart_data = []
+            for date, row in historical_data.iterrows():
+                volume_chart_data.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'volume': int(row['Volume']) if not pd.isna(row['Volume']) else 0
+                })
+
+            return {
+                'historical': historical_chart_data,
+                'prediction': prediction_chart_data,
+                'volume': volume_chart_data
+            }
+
+        except Exception as e:
+            logger.error(f"Error generating chart data: {e}")
+            return {
+                'historical': [],
+                'prediction': [],
+                'volume': []
+            }
+
+    def _generate_enhanced_reasoning(self, stock_data, indicators, category, prediction_result, confidence):
+        """Generate comprehensive AI reasoning with multiple analysis points"""
+        reasoning_points = []
+
+        current_price = indicators['current_price']
+        rsi = indicators.get('rsi', 50)
+        sma_20 = indicators.get('sma_20', current_price)
+        volume = stock_data.get('volume', 0)
+        market_cap = stock_data.get('market_cap', 0)
+        sector = stock_data.get('sector', 'Unknown')
+
+        # Technical Analysis Reasoning
+        if rsi < 30:
+            reasoning_points.append({
+                'icon': '📉',
+                'title': 'Oversold Conditions',
+                'text': f'RSI of {rsi:.1f} indicates the stock is oversold, suggesting potential upward price correction.'
+            })
+        elif rsi > 70:
+            reasoning_points.append({
+                'icon': '📈',
+                'title': 'Overbought Territory',
+                'text': f'RSI of {rsi:.1f} shows overbought conditions, indicating possible price pullback.'
+            })
+        else:
+            reasoning_points.append({
+                'icon': '⚖️',
+                'title': 'Neutral Momentum',
+                'text': f'RSI of {rsi:.1f} indicates balanced buying and selling pressure.'
+            })
+
+        # Price Trend Analysis
+        price_vs_sma = ((current_price - sma_20) / sma_20) * 100 if sma_20 else 0
+        if price_vs_sma > 5:
+            reasoning_points.append({
+                'icon': '🚀',
+                'title': 'Strong Uptrend',
+                'text': f'Price is {price_vs_sma:.1f}% above 20-day moving average, indicating bullish momentum.'
+            })
+        elif price_vs_sma < -5:
+            reasoning_points.append({
+                'icon': '📉',
+                'title': 'Downward Pressure',
+                'text': f'Price is {abs(price_vs_sma):.1f}% below 20-day moving average, showing bearish sentiment.'
+            })
+        else:
+            reasoning_points.append({
+                'icon': '📊',
+                'title': 'Price Consolidation',
+                'text': 'Price is trading near its 20-day average, suggesting consolidation phase.'
+            })
+
+        # Volume Analysis
+        if volume > 0:
+            reasoning_points.append({
+                'icon': '📊',
+                'title': 'Volume Analysis',
+                'text': f'Current volume of {volume:,} shares provides liquidity for position entries and exits.'
+            })
+
+        # Market Cap & Category Analysis
+        if category == 'large_cap':
+            reasoning_points.append({
+                'icon': '🏢',
+                'title': 'Large Cap Stability',
+                'text': f'${market_cap/1e9:.1f}B market cap provides stability and institutional interest.'
+            })
+        elif category in ['penny', 'micro_penny']:
+            reasoning_points.append({
+                'icon': '⚠️',
+                'title': 'High Risk Profile',
+                'text': 'Penny stock classification indicates high volatility and speculative nature.'
+            })
+        elif category == 'small_cap':
+            reasoning_points.append({
+                'icon': '🌱',
+                'title': 'Growth Potential',
+                'text': 'Small cap status offers growth potential but with increased volatility risk.'
+            })
+
+        # Sector Analysis
+        if sector != 'Unknown':
+            reasoning_points.append({
+                'icon': '🏭',
+                'title': 'Sector Dynamics',
+                'text': f'{sector} sector positioning influences fundamental valuation and market sentiment.'
+            })
+
+        # Confidence Analysis
+        if confidence > 0.8:
+            reasoning_points.append({
+                'icon': '🎯',
+                'title': 'High Confidence Prediction',
+                'text': f'{confidence*100:.1f}% confidence based on strong technical signals and market data quality.'
+            })
+        elif confidence < 0.5:
+            reasoning_points.append({
+                'icon': '🤔',
+                'title': 'Uncertain Outlook',
+                'text': f'{confidence*100:.1f}% confidence due to mixed signals or limited data reliability.'
+            })
+
+        # Prediction Rationale
+        prediction = prediction_result['prediction']
+        if 'BUY' in prediction.upper():
+            reasoning_points.append({
+                'icon': '💰',
+                'title': 'Buy Signal Rationale',
+                'text': prediction_result['reasoning']
+            })
+        elif 'SELL' in prediction.upper():
+            reasoning_points.append({
+                'icon': '💸',
+                'title': 'Sell Signal Rationale',
+                'text': prediction_result['reasoning']
+            })
+        else:
+            reasoning_points.append({
+                'icon': '⏸️',
+                'title': 'Hold Position Rationale',
+                'text': prediction_result['reasoning']
+            })
+
+        return reasoning_points
 
 # Initialize services
 market_data_service = MarketDataService()

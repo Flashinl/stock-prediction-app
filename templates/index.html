@@ -2162,12 +2162,22 @@
         function createPriceChart(historical, prediction, containerId) {
             const ctx = document.getElementById(containerId).getContext('2d');
 
-            const historicalLabels = historical.map(d => d.date.toLocaleDateString());
-            const predictionLabels = prediction.map(d => d.date.toLocaleDateString());
+            // Handle both old and new data formats
+            const historicalLabels = historical.map(d => {
+                const date = typeof d.date === 'string' ? new Date(d.date) : d.date;
+                return date.toLocaleDateString();
+            });
+
+            const predictionLabels = prediction ? prediction.map(d => {
+                const date = typeof d.date === 'string' ? new Date(d.date) : d.date;
+                return date.toLocaleDateString();
+            }) : [];
+
             const allLabels = [...historicalLabels, ...predictionLabels];
 
             const historicalPrices = historical.map(d => d.price);
-            const predictionPrices = [historical[historical.length - 1].price, ...prediction.map(d => d.price)];
+            const predictionPrices = prediction && prediction.length > 0 ?
+                [historical[historical.length - 1].price, ...prediction.map(d => d.price)] : [];
 
             new Chart(ctx, {
                 type: 'line',
@@ -2175,7 +2185,7 @@
                     labels: allLabels,
                     datasets: [{
                         label: 'Historical Price',
-                        data: [...historicalPrices, ...Array(prediction.length).fill(null)],
+                        data: [...historicalPrices, ...Array(predictionLabels.length).fill(null)],
                         borderColor: '#00ff88',
                         backgroundColor: 'rgba(0, 255, 136, 0.1)',
                         borderWidth: 3,
@@ -2218,17 +2228,17 @@
         function createVolumeChart(data, symbol, containerId) {
             const ctx = document.getElementById(containerId).getContext('2d');
 
-            // Generate consistent volume data based on symbol
-            const symbolSeed = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const volumeData = data.map((_, index) => {
-                const seed = symbolSeed * 7.1 + index;
-                return Math.floor(seededRandom(seed) * 50000000 + 10000000);
+            // Use real volume data from backend if available
+            const volumeData = data.map(d => d.volume || 0);
+            const labels = data.map(d => {
+                const date = typeof d.date === 'string' ? new Date(d.date) : d.date;
+                return date.toLocaleDateString();
             });
 
             new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: data.map(d => d.date.toLocaleDateString()),
+                    labels: labels,
                     datasets: [{
                         label: 'Volume',
                         data: volumeData,
@@ -2394,9 +2404,19 @@
             // Create charts after DOM is updated (with error handling)
             setTimeout(() => {
                 try {
-                    // For now, skip chart creation since backend doesn't provide chart data yet
-                    // TODO: Add chart data generation in backend
-                    console.log('Chart creation skipped - backend integration in progress');
+                    if (data.historical_data && data.historical_data.length > 0) {
+                        createPriceChart(data.historical_data, data.prediction_data, 'priceChart');
+                        console.log('Price chart created successfully');
+                    } else {
+                        console.log('No historical data available for price chart');
+                    }
+
+                    if (data.volume_data && data.volume_data.length > 0) {
+                        createVolumeChart(data.volume_data, data.symbol, 'volumeChart');
+                        console.log('Volume chart created successfully');
+                    } else {
+                        console.log('No volume data available for volume chart');
+                    }
                 } catch (error) {
                     console.error('Error creating charts:', error);
                 }
@@ -2654,7 +2674,23 @@
         }
 
         function generateAIReasoning(data) {
-            // Use the reasoning provided by the backend if available
+            // Use the enhanced reasoning provided by the backend if available
+            if (data.enhanced_reasoning && data.enhanced_reasoning.length > 0) {
+                let reasoningHtml = '';
+                data.enhanced_reasoning.forEach(point => {
+                    reasoningHtml += `
+                        <div class="reasoning-item">
+                            <div class="reasoning-icon">${point.icon}</div>
+                            <div class="reasoning-text">
+                                <strong>${point.title}:</strong> ${point.text}
+                            </div>
+                        </div>
+                    `;
+                });
+                return reasoningHtml;
+            }
+
+            // Fallback to simple reasoning if enhanced not available
             if (data.reasoning) {
                 return `
                     <div class="reasoning-item">
