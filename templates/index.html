@@ -2071,6 +2071,19 @@
             };
         }
 
+        async function testAPI() {
+            console.log('Testing API connection...');
+            try {
+                const response = await fetch('/api/test');
+                const data = await response.json();
+                console.log('API test result:', data);
+                alert(`API Test: ${data.status} - ${data.message}`);
+            } catch (error) {
+                console.error('API test failed:', error);
+                alert(`API Test Failed: ${error.message}`);
+            }
+        }
+
         async function predictStock() {
             console.log('predictStock function called'); // Debug log
 
@@ -2095,6 +2108,8 @@
             predictBtn.disabled = true;
 
             try {
+                console.log('Making API call to /api/predict with symbol:', symbol);
+
                 // Call the backend API for real predictions
                 const response = await fetch('/api/predict', {
                     method: 'POST',
@@ -2104,19 +2119,36 @@
                     body: JSON.stringify({ symbol: symbol })
                 });
 
+                console.log('API response status:', response.status);
+                console.log('API response headers:', response.headers);
+
+                if (!response.ok) {
+                    console.error('API response not ok:', response.status, response.statusText);
+                }
+
                 const data = await response.json();
+                console.log('API response data:', data);
 
                 if (response.ok && !data.error) {
                     // Show the real prediction results
                     showResults(data);
                 } else {
                     // Show error message
-                    showError(data.error || 'Failed to get prediction');
+                    showError(data.error || `API Error: ${response.status} ${response.statusText}`);
                 }
 
             } catch (error) {
-                console.error('Prediction error:', error);
-                showError('Network error. Please check your connection and try again.');
+                console.error('Prediction error details:', error);
+                console.error('Error type:', error.name);
+                console.error('Error message:', error.message);
+
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showError('Cannot connect to server. Please check if the application is running properly.');
+                } else if (error.name === 'SyntaxError') {
+                    showError('Server returned invalid response. Please try again.');
+                } else {
+                    showError(`Network error: ${error.message}. Please check your connection and try again.`);
+                }
             } finally {
                 // Hide loading state
                 loading.style.display = 'none';

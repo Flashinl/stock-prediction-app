@@ -26,7 +26,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 
 # Production configuration
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -1083,12 +1089,29 @@ def resend_verification():
 
 @app.route('/api/health')
 def health():
-    stock_count = Stock.query.count()
+    try:
+        stock_count = Stock.query.count()
+        return jsonify({
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": "2.0",
+            "stocks_in_database": stock_count
+        })
+    except Exception as e:
+        logger.error(f"Health check error: {e}")
+        return jsonify({
+            "status": "error",
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e)
+        }), 500
+
+@app.route('/api/test')
+def test():
+    """Simple test endpoint to verify API is working"""
     return jsonify({
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-        "version": "2.0",
-        "stocks_in_database": stock_count
+        "status": "success",
+        "message": "API is working!",
+        "timestamp": datetime.now().isoformat()
     })
 
 @app.route('/api/stocks/populate', methods=['POST'])
