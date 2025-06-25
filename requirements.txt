@@ -12,6 +12,9 @@ numpy>=1.24.0
 
 # Financial data
 yfinance>=0.2.18
+alpha-vantage>=2.3.1
+polygon-api-client>=1.12.0
+requests>=2.31.0
 
 # Configuration and utilities
 python-dotenv>=1.0.0

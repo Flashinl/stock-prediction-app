@@ -2221,7 +2221,14 @@
             results.innerHTML = `
                 <div class="stock-header">
                     <div class="company-name">${data.company_name}</div>
-                    <div class="stock-symbol">${data.symbol} • ${data.market_cap} Market Cap</div>
+                    <div class="stock-symbol">
+                        ${data.symbol} • ${data.exchange}
+                        ${data.market_cap ? '• $' + (data.market_cap / 1000000000).toFixed(1) + 'B Market Cap' : ''}
+                        ${data.is_penny_stock ? '• <span style="color: #ff4444;">PENNY STOCK</span>' : ''}
+                    </div>
+                    <div style="color: #888; margin-top: 5px;">
+                        ${data.sector} • ${data.industry} • ${data.stock_category?.toUpperCase().replace('_', ' ')}
+                    </div>
                 </div>
 
                 <div class="prediction-grid">
@@ -2562,21 +2569,12 @@
 
 
         function generateRiskWarnings(data) {
-            if (!data.risk_factors || data.risk_factors.length === 0) {
+            // Use the new risk_warnings array from backend
+            const warnings = data.risk_warnings || [];
+
+            if (warnings.length === 0) {
                 return '';
             }
-
-            const riskMessages = {
-                'penny_stock': '⚠️ Penny Stock: Extremely high volatility and risk',
-                'high_volatility': '⚠️ High Volatility: Price swings can be extreme',
-                'small_cap': '⚠️ Small Cap: Limited liquidity and higher risk',
-                'extreme_prediction': '⚠️ Extreme Prediction: Model suggests unusually high movement',
-                'high_risk': '⚠️ High Risk: Significant potential for loss'
-            };
-
-            const warnings = data.risk_factors.map(factor => riskMessages[factor]).filter(Boolean);
-
-            if (warnings.length === 0) return '';
 
             let warningHtml = `
                 <div class="risk-warning-section">
@@ -2588,20 +2586,12 @@
                 warningHtml += `<div class="risk-warning">${warning}</div>`;
             });
 
-            if (data.original_prediction) {
-                warningHtml += `
-                    <div class="risk-warning extreme">
-                        🚨 <strong>AI Model Alert:</strong> Original prediction was ${data.original_prediction > 0 ? '+' : ''}${data.original_prediction}%
-                        but capped for realism. This indicates potential for extreme volatility.
-                    </div>
-                `;
-            }
-
             warningHtml += `
                     </div>
                     <div class="risk-disclaimer">
                         <strong>Disclaimer:</strong> These predictions are AI-generated estimates and should not be considered financial advice.
-                        High-risk stocks can result in significant losses. Always do your own research and consider consulting a financial advisor.
+                        ${data.is_penny_stock ? 'Penny stocks are extremely high-risk investments. ' : ''}
+                        Always do your own research and consider consulting a financial advisor.
                     </div>
                 </div>
             `;
@@ -2610,9 +2600,21 @@
         }
 
         function generateAIReasoning(data) {
+            // Use the reasoning provided by the backend if available
+            if (data.reasoning) {
+                return `
+                    <div class="reasoning-item">
+                        <div class="reasoning-icon">🤖</div>
+                        <div class="reasoning-text">
+                            <strong>AI Analysis:</strong> ${data.reasoning}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Fallback to client-side reasoning generation
             const symbol = data.symbol;
-            const stockData = stockDatabase[symbol];
-            const sector = stockData?.sector || 'Unknown';
+            const sector = data.sector || 'Unknown';
             const prediction = data.prediction;
             const changePercent = data.expected_change_percent;
 
