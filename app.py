@@ -1020,29 +1020,54 @@ class StockPredictor:
         # Real-world market context and events (December 2024)
         market_context = self._get_current_market_context(symbol, sector, category)
 
-        # Market Environment Analysis
+        # Current Market Environment Analysis
+        market_env = market_context['market_environment']
         reasoning_points.append({
             'icon': '🌍',
-            'title': 'Current Market Environment',
-            'text': f"{market_context['market_environment']}. {market_context['global_factors'][0]}"
+            'title': 'Market Environment',
+            'text': f"{market_env['overall_sentiment']}. {market_env['key_themes'][0]}"
         })
 
-        # Sector-Specific Analysis
-        if sector != 'Unknown' and sector in ['Technology', 'Healthcare', 'Financial Services', 'Energy', 'Consumer Discretionary']:
+        # Economic Indicators Context
+        econ_indicators = market_context['economic_indicators']
+        reasoning_points.append({
+            'icon': '📊',
+            'title': 'Economic Backdrop',
+            'text': f"Inflation {econ_indicators['inflation']}, while {econ_indicators['employment']}. GDP growth {econ_indicators['gdp_growth']}"
+        })
+
+        # Geopolitical Context
+        geopolitical = market_context['geopolitical_factors']
+        reasoning_points.append({
+            'icon': '🌐',
+            'title': 'Geopolitical Factors',
+            'text': f"{geopolitical['us_china_relations']}. {geopolitical['trade_policy']}"
+        })
+
+        # Enhanced Sector-Specific Analysis
+        if sector != 'Unknown' and market_context['sector_trends']:
             sector_info = market_context['sector_trends']
             reasoning_points.append({
                 'icon': '🏭',
-                'title': f'{sector} Sector Outlook',
-                'text': f"{sector_info.get('trend', 'Sector showing mixed signals')}. {sector_info.get('opportunities', 'Monitoring for opportunities')}"
+                'title': f'{sector} Sector Dynamics',
+                'text': f"{sector_info.get('current_dynamics', 'Sector showing mixed signals')}. Outlook: {sector_info.get('outlook', 'Monitoring developments')}"
             })
 
-        # Company-Specific Context
-        if market_context['company_specific']:
-            company_info = market_context['company_specific']
+        # News Sentiment and Current Events
+        news_context = market_context['news_sentiment']
+        if news_context['sector_news']:
+            reasoning_points.append({
+                'icon': '📰',
+                'title': f'{sector} Sector News',
+                'text': f"Recent developments: {news_context['sector_news'][0]}. {news_context['sector_news'][1] if len(news_context['sector_news']) > 1 else ''}"
+            })
+
+        # Company-Specific Current Events
+        if news_context['company_news']:
             reasoning_points.append({
                 'icon': '🏢',
-                'title': 'Company Position',
-                'text': f"{company_info.get('position', 'Established market participant')}. {company_info.get('catalysts', 'Multiple growth drivers identified')}"
+                'title': f'{symbol} Company Updates',
+                'text': f"{news_context['company_news'][0]}. {news_context['company_news'][1] if len(news_context['company_news']) > 1 else ''}"
             })
 
         # Technical Analysis Reasoning
@@ -1136,78 +1161,400 @@ class StockPredictor:
                 'text': f'{confidence*100:.1f}% confidence due to mixed signals or limited data reliability.'
             })
 
-        # Prediction Rationale
+        # Global Market Sentiment Analysis
+        global_factors = market_context['global_factors']
+        reasoning_points.append({
+            'icon': '🌎',
+            'title': 'Global Market Drivers',
+            'text': f"{global_factors[0]}. Additionally, {global_factors[3]}"
+        })
+
+        # Investment Thesis Based on Current Events
+        investment_thesis = self._generate_investment_thesis(symbol, sector, category, market_context, prediction_result)
+        reasoning_points.append({
+            'icon': '🎯',
+            'title': 'Investment Thesis',
+            'text': investment_thesis
+        })
+
+        # Prediction Rationale with Market Context
         prediction = prediction_result['prediction']
         if 'BUY' in prediction.upper():
             reasoning_points.append({
                 'icon': '💰',
                 'title': 'Buy Signal Rationale',
-                'text': prediction_result['reasoning']
+                'text': f"{prediction_result['reasoning']} Current market conditions support this outlook given {market_env['market_phase']}"
             })
         elif 'SELL' in prediction.upper():
             reasoning_points.append({
                 'icon': '💸',
                 'title': 'Sell Signal Rationale',
-                'text': prediction_result['reasoning']
+                'text': f"{prediction_result['reasoning']} Market environment suggests caution given current valuations and economic uncertainty"
             })
         else:
             reasoning_points.append({
                 'icon': '⏸️',
                 'title': 'Hold Position Rationale',
-                'text': prediction_result['reasoning']
+                'text': f"{prediction_result['reasoning']} Current market volatility supports a wait-and-see approach"
             })
 
         return reasoning_points
 
     def _get_current_market_context(self, symbol, sector, category):
-        """Generate real-world market context and current events analysis"""
+        """Generate comprehensive real-world market context and current events analysis"""
         context = {
-            'market_environment': 'Mixed signals with Fed policy uncertainty',
+            'market_environment': self._get_current_market_environment(),
             'sector_trends': {},
             'company_specific': {},
-            'global_factors': []
+            'global_factors': self._get_current_global_factors(),
+            'economic_indicators': self._get_economic_indicators_context(),
+            'geopolitical_factors': self._get_geopolitical_context(),
+            'news_sentiment': self._get_news_sentiment_context(symbol, sector)
         }
 
-        # Current market environment (December 2024)
-        context['global_factors'] = [
-            'Federal Reserve maintaining cautious stance on interest rates',
-            'Inflation showing signs of stabilization',
-            'Geopolitical tensions affecting energy and defense sectors',
-            'AI revolution driving tech valuations',
-            'Supply chain normalization continuing'
+    def _get_current_market_environment(self):
+        """Current market environment analysis (December 2024)"""
+        return {
+            'overall_sentiment': 'Cautiously optimistic with selective opportunities',
+            'key_themes': [
+                'AI transformation driving selective tech outperformance',
+                'Federal Reserve policy normalization creating sector rotation',
+                'Corporate earnings showing resilience despite macro headwinds',
+                'Consumer spending patterns shifting toward experiences and services'
+            ],
+            'market_phase': 'Late-cycle expansion with emerging growth themes'
+        }
+
+    def _get_current_global_factors(self):
+        """Current global factors affecting markets (December 2024)"""
+        return [
+            'Federal Reserve signaling potential rate cuts in 2024 amid cooling inflation',
+            'China reopening driving global supply chain optimization',
+            'European energy security improving with diversified supply sources',
+            'AI and automation reshaping productivity across industries',
+            'Climate transition accelerating with massive infrastructure investments',
+            'Deglobalization trends creating regional supply chain hubs',
+            'Demographic shifts driving healthcare and automation demand'
         ]
 
-        # Sector-specific trends
+    def _get_economic_indicators_context(self):
+        """Current economic indicators and their market impact"""
+        return {
+            'inflation': 'Moderating from peaks, core PCE approaching Fed target',
+            'employment': 'Labor market cooling but remaining resilient',
+            'gdp_growth': 'Slowing but positive, supported by consumer spending',
+            'consumer_confidence': 'Stabilizing after recent volatility',
+            'manufacturing': 'Mixed signals with regional variations',
+            'housing': 'Adjusting to higher rates, inventory normalizing'
+        }
+
+    def _get_geopolitical_context(self):
+        """Current geopolitical factors and their market implications"""
+        return {
+            'us_china_relations': 'Strategic competition with selective cooperation on climate',
+            'russia_ukraine': 'Ongoing conflict affecting energy and commodity markets',
+            'middle_east': 'Regional tensions impacting oil prices and defense spending',
+            'trade_policy': 'Reshoring and friend-shoring driving industrial investment',
+            'cyber_security': 'Increasing threats driving cybersecurity investment',
+            'climate_policy': 'Global coordination on green transition accelerating'
+        }
+
+    def _get_news_sentiment_context(self, symbol, sector):
+        """Generate news sentiment and current events context for specific stocks/sectors"""
+        sentiment_context = {
+            'overall_sentiment': 'neutral',
+            'key_events': [],
+            'sector_news': [],
+            'company_news': []
+        }
+
+        # Sector-specific current events and sentiment
         if sector == 'Technology':
-            context['sector_trends'] = {
-                'trend': 'AI and cloud computing driving growth',
-                'challenges': 'Regulatory scrutiny and valuation concerns',
-                'opportunities': 'Enterprise AI adoption accelerating'
+            sentiment_context.update({
+                'overall_sentiment': 'positive',
+                'sector_news': [
+                    'AI adoption accelerating across enterprise and consumer markets',
+                    'Cloud computing demand remaining robust despite economic uncertainty',
+                    'Semiconductor cycle showing signs of bottoming out',
+                    'Regulatory scrutiny on big tech creating compliance costs but market stability'
+                ],
+                'key_events': [
+                    'OpenAI and Microsoft partnership driving enterprise AI adoption',
+                    'Apple Vision Pro launch creating new spatial computing market',
+                    'NVIDIA data center revenue growth exceeding expectations',
+                    'Cybersecurity spending increasing due to geopolitical tensions'
+                ]
+            })
+
+        elif sector == 'Healthcare':
+            sentiment_context.update({
+                'overall_sentiment': 'positive',
+                'sector_news': [
+                    'Aging population demographics driving long-term demand growth',
+                    'GLP-1 weight loss drugs creating massive new market opportunity',
+                    'AI-powered drug discovery accelerating development timelines',
+                    'Medicare negotiations creating pricing pressure but providing certainty'
+                ],
+                'key_events': [
+                    'Ozempic and Wegovy success driving diabetes/obesity treatment revolution',
+                    'Alzheimer drug approvals providing new treatment options',
+                    'Biosimilar competition intensifying in key therapeutic areas',
+                    'Telehealth adoption stabilizing at elevated post-pandemic levels'
+                ]
+            })
+
+        elif sector == 'Financial Services':
+            sentiment_context.update({
+                'overall_sentiment': 'mixed',
+                'sector_news': [
+                    'Net interest margins benefiting from higher rate environment',
+                    'Credit quality concerns emerging in commercial real estate',
+                    'Digital transformation accelerating with fintech partnerships',
+                    'Regulatory capital requirements creating competitive moats'
+                ],
+                'key_events': [
+                    'Regional bank stress tests revealing vulnerabilities',
+                    'Credit card delinquencies normalizing from historic lows',
+                    'Cryptocurrency regulation providing market clarity',
+                    'FDIC insurance reforms strengthening deposit confidence'
+                ]
+            })
+
+        elif sector == 'Energy':
+            sentiment_context.update({
+                'overall_sentiment': 'mixed',
+                'sector_news': [
+                    'Oil prices stabilizing amid global supply-demand rebalancing',
+                    'Renewable energy investments accelerating with IRA incentives',
+                    'Natural gas demand shifting with LNG export capacity expansion',
+                    'Carbon capture and storage technologies gaining commercial viability'
+                ],
+                'key_events': [
+                    'OPEC+ production cuts supporting oil price stability',
+                    'US becoming net energy exporter reducing geopolitical dependence',
+                    'Offshore wind projects facing supply chain and permitting challenges',
+                    'Energy storage costs declining enabling grid-scale deployment'
+                ]
+            })
+
+        elif sector == 'Consumer Discretionary':
+            sentiment_context.update({
+                'overall_sentiment': 'mixed',
+                'sector_news': [
+                    'Consumer spending shifting from goods to services and experiences',
+                    'E-commerce growth moderating but remaining elevated vs pre-pandemic',
+                    'Premium brands showing resilience amid economic uncertainty',
+                    'Supply chain costs normalizing but labor inflation persisting'
+                ],
+                'key_events': [
+                    'Holiday shopping patterns showing preference for value and experiences',
+                    'Electric vehicle adoption accelerating with expanding charging infrastructure',
+                    'Streaming services facing subscriber saturation and content cost pressures',
+                    'Travel and hospitality demand recovering to pre-pandemic levels'
+                ]
+            })
+
+        # Company-specific current events and sentiment
+        company_events = self._get_company_specific_events(symbol)
+        sentiment_context['company_news'] = company_events
+
+        return sentiment_context
+
+    def _get_company_specific_events(self, symbol):
+        """Get current events and news specific to individual companies"""
+        events = []
+
+        if symbol == 'AAPL':
+            events = [
+                'iPhone 15 launch with USB-C transition driving upgrade cycle',
+                'Services revenue growth maintaining high margins and recurring revenue',
+                'Vision Pro spatial computing platform creating new product category',
+                'China market recovery supporting revenue growth in key region'
+            ]
+        elif symbol == 'MSFT':
+            events = [
+                'Azure cloud growth accelerating with AI and Copilot integration',
+                'OpenAI partnership positioning Microsoft as AI infrastructure leader',
+                'Office 365 Copilot driving productivity software transformation',
+                'Gaming division benefiting from Activision Blizzard acquisition'
+            ]
+        elif symbol == 'GOOGL':
+            events = [
+                'Bard AI competing with ChatGPT in generative AI market',
+                'Search advertising showing resilience despite economic headwinds',
+                'Cloud division gaining market share with AI and data analytics',
+                'YouTube Shorts competing effectively with TikTok for engagement'
+            ]
+        elif symbol == 'AMZN':
+            events = [
+                'AWS growth reaccelerating as enterprise cloud spending normalizes',
+                'Prime Video and advertising creating high-margin revenue streams',
+                'Logistics network optimization improving delivery efficiency',
+                'Alexa and smart home ecosystem expanding with AI integration'
+            ]
+        elif symbol == 'TSLA':
+            events = [
+                'Cybertruck production ramp addressing commercial vehicle market',
+                'Supercharger network opening to other EVs creating new revenue stream',
+                'Full Self-Driving progress advancing toward regulatory approval',
+                'Energy storage business growing with grid-scale deployments'
+            ]
+        elif symbol == 'NVDA':
+            events = [
+                'Data center GPU demand exceeding supply amid AI infrastructure buildout',
+                'Gaming GPU market recovering from crypto mining overhang',
+                'Automotive AI partnerships expanding autonomous vehicle capabilities',
+                'China export restrictions creating supply chain complexity'
+            ]
+        elif symbol == 'META':
+            events = [
+                'Reality Labs investments in metaverse showing early commercial progress',
+                'Instagram Reels competing effectively with TikTok for creator economy',
+                'AI-powered advertising targeting improving despite privacy changes',
+                'WhatsApp Business monetization expanding in international markets'
+            ]
+        elif symbol == 'LUMN':
+            events = [
+                'Fiber network expansion benefiting from broadband infrastructure demand',
+                '5G infrastructure investments supporting wireless carrier partnerships',
+                'Debt reduction efforts improving financial flexibility',
+                'Edge computing services addressing latency-sensitive applications'
+            ]
+        elif symbol in ['JPM', 'BAC', 'WFC', 'C']:
+            events = [
+                'Net interest margin expansion benefiting from rate environment',
+                'Credit loss provisions normalizing from pandemic lows',
+                'Digital banking investments improving customer acquisition',
+                'Regulatory stress tests demonstrating capital strength'
+            ]
+        elif symbol in ['JNJ', 'PFE', 'MRK', 'ABBV']:
+            events = [
+                'Pipeline drug approvals providing new revenue growth drivers',
+                'Biosimilar competition intensifying in key therapeutic areas',
+                'Emerging market expansion addressing global health needs',
+                'AI-powered drug discovery accelerating development timelines'
+            ]
+
+        return events
+
+    def _get_enhanced_sector_trends(self, sector):
+        """Get comprehensive sector trends with current market dynamics"""
+        sector_trends = {}
+
+        if sector == 'Technology':
+            sector_trends = {
+                'trend': 'AI transformation driving unprecedented productivity gains',
+                'current_dynamics': 'Enterprise AI adoption accelerating, cloud infrastructure demand robust',
+                'challenges': 'Regulatory scrutiny intensifying, talent competition fierce, valuation multiples compressing',
+                'opportunities': 'Generative AI creating new markets, edge computing expansion, cybersecurity demand surge',
+                'outlook': 'Selective outperformance with AI leaders vs legacy tech divergence'
             }
         elif sector == 'Healthcare':
-            context['sector_trends'] = {
-                'trend': 'Aging population driving demand',
-                'challenges': 'Drug pricing pressure and regulatory hurdles',
-                'opportunities': 'Breakthrough therapies and personalized medicine'
+            sector_trends = {
+                'trend': 'Demographic tailwinds driving sustainable long-term growth',
+                'current_dynamics': 'GLP-1 drugs revolutionizing obesity treatment, AI accelerating drug discovery',
+                'challenges': 'Medicare price negotiations, biosimilar competition, regulatory complexity',
+                'opportunities': 'Personalized medicine breakthrough, aging population care, digital health adoption',
+                'outlook': 'Defensive growth with innovation-driven outperformance'
             }
         elif sector == 'Financial Services':
-            context['sector_trends'] = {
-                'trend': 'Interest rate environment stabilizing',
-                'challenges': 'Credit quality concerns and regulatory changes',
-                'opportunities': 'Digital transformation and fintech integration'
+            sector_trends = {
+                'trend': 'Interest rate normalization creating earnings tailwinds',
+                'current_dynamics': 'Net interest margins expanding, digital transformation accelerating',
+                'challenges': 'Credit cycle concerns emerging, regulatory capital requirements, fintech disruption',
+                'opportunities': 'Wealth management growth, payment processing expansion, crypto integration',
+                'outlook': 'Cyclical recovery with quality differentiation'
             }
         elif sector == 'Energy':
-            context['sector_trends'] = {
-                'trend': 'Transition to renewable energy accelerating',
-                'challenges': 'Volatile commodity prices and ESG pressure',
-                'opportunities': 'Clean energy investments and efficiency gains'
+            sector_trends = {
+                'trend': 'Energy transition accelerating with massive capital reallocation',
+                'current_dynamics': 'Oil market rebalancing, renewable capacity additions surging',
+                'challenges': 'Stranded asset risks, volatile commodity prices, ESG investment constraints',
+                'opportunities': 'Clean energy infrastructure, carbon capture technology, energy storage deployment',
+                'outlook': 'Transformation phase with winners and losers emerging'
             }
         elif sector == 'Consumer Discretionary':
-            context['sector_trends'] = {
-                'trend': 'Consumer spending patterns shifting',
-                'challenges': 'Inflation impact on discretionary spending',
-                'opportunities': 'E-commerce growth and premium brands resilience'
+            sector_trends = {
+                'trend': 'Consumer behavior permanently shifted toward experiences and digital',
+                'current_dynamics': 'Services spending recovering, e-commerce stabilizing at elevated levels',
+                'challenges': 'Inflation pressure on discretionary spending, supply chain normalization',
+                'opportunities': 'Premium brand resilience, travel recovery, EV adoption acceleration',
+                'outlook': 'Bifurcated market with quality brands outperforming'
             }
+        elif sector == 'Consumer Staples':
+            sector_trends = {
+                'trend': 'Defensive characteristics attractive amid economic uncertainty',
+                'current_dynamics': 'Pricing power demonstration, private label competition intensifying',
+                'challenges': 'Input cost inflation, changing consumer preferences, retail consolidation',
+                'opportunities': 'Health and wellness trends, emerging market expansion, sustainability focus',
+                'outlook': 'Steady performance with innovation-driven growth'
+            }
+        elif sector == 'Communication Services':
+            sector_trends = {
+                'trend': 'Digital advertising recovery with AI-powered targeting improvements',
+                'current_dynamics': 'Streaming competition intensifying, 5G infrastructure deployment continuing',
+                'challenges': 'Content cost inflation, subscriber saturation, regulatory oversight',
+                'opportunities': 'AI content creation, edge computing services, digital transformation services',
+                'outlook': 'Platform leaders consolidating market share'
+            }
+
+        return sector_trends
+
+    def _generate_investment_thesis(self, symbol, sector, category, market_context, prediction_result):
+        """Generate comprehensive investment thesis based on current market conditions"""
+
+        # Base thesis components
+        thesis_components = []
+
+        # Market positioning
+        if category in ['large_cap', 'mid_cap']:
+            thesis_components.append("established market position provides defensive characteristics")
+        elif category in ['small_cap', 'micro_cap']:
+            thesis_components.append("growth potential from market share expansion opportunities")
+        elif category in ['penny', 'micro_penny']:
+            thesis_components.append("speculative opportunity with high risk/reward profile")
+
+        # Sector-specific thesis
+        sector_trends = market_context.get('sector_trends', {})
+        if sector_trends:
+            outlook = sector_trends.get('outlook', '')
+            if 'outperformance' in outlook.lower():
+                thesis_components.append(f"sector positioned for outperformance due to {sector_trends.get('current_dynamics', 'favorable trends')}")
+            elif 'recovery' in outlook.lower():
+                thesis_components.append(f"cyclical recovery potential as {sector_trends.get('current_dynamics', 'conditions improve')}")
+            else:
+                thesis_components.append(f"sector dynamics suggest {outlook.lower()}")
+
+        # Company-specific catalysts
+        news_context = market_context.get('news_sentiment', {})
+        company_news = news_context.get('company_news', [])
+        if company_news:
+            thesis_components.append(f"near-term catalysts include {company_news[0].lower()}")
+
+        # Economic environment impact
+        econ_context = market_context.get('economic_indicators', {})
+        if prediction_result['expected_change'] > 0:
+            if econ_context.get('gdp_growth', '').find('positive') != -1:
+                thesis_components.append("supportive economic backdrop for growth")
+            else:
+                thesis_components.append("company-specific drivers outweighing macro headwinds")
+        else:
+            thesis_components.append("macro environment creating near-term challenges")
+
+        # Risk assessment
+        confidence = prediction_result.get('confidence', 50)
+        if confidence > 75:
+            thesis_components.append("high conviction opportunity with multiple supporting factors")
+        elif confidence < 50:
+            thesis_components.append("elevated uncertainty requiring careful position sizing")
+
+        # Combine thesis components
+        thesis = "Investment thesis: " + ", ".join(thesis_components[:3])  # Limit to 3 key points
+
+        return thesis
+
+        # Enhanced sector-specific trends with current events
+        context['sector_trends'] = self._get_enhanced_sector_trends(sector)
 
         # Company-specific context based on symbol
         if symbol in ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META']:
