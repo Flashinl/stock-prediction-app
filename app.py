@@ -1375,6 +1375,86 @@ def search_stocks():
         logger.error(f"Error searching stocks: {e}")
         return jsonify({"error": "Search failed"}), 500
 
+@app.route('/api/stocks/popular', methods=['GET'])
+def get_popular_stocks():
+    """Get a list of popular stocks for dropdown suggestions"""
+    try:
+        # Comprehensive list of popular stocks across all categories
+        popular_stocks = [
+            # Large Cap Tech
+            {'symbol': 'AAPL', 'name': 'Apple Inc.', 'sector': 'Technology'},
+            {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'sector': 'Technology'},
+            {'symbol': 'GOOGL', 'name': 'Alphabet Inc.', 'sector': 'Technology'},
+            {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'sector': 'Consumer Discretionary'},
+            {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'sector': 'Technology'},
+            {'symbol': 'META', 'name': 'Meta Platforms Inc.', 'sector': 'Technology'},
+            {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'sector': 'Consumer Discretionary'},
+            {'symbol': 'NFLX', 'name': 'Netflix Inc.', 'sector': 'Communication Services'},
+
+            # Financial Services
+            {'symbol': 'JPM', 'name': 'JPMorgan Chase & Co.', 'sector': 'Financial Services'},
+            {'symbol': 'BAC', 'name': 'Bank of America Corp.', 'sector': 'Financial Services'},
+            {'symbol': 'WFC', 'name': 'Wells Fargo & Company', 'sector': 'Financial Services'},
+            {'symbol': 'GS', 'name': 'Goldman Sachs Group Inc.', 'sector': 'Financial Services'},
+            {'symbol': 'MS', 'name': 'Morgan Stanley', 'sector': 'Financial Services'},
+            {'symbol': 'V', 'name': 'Visa Inc.', 'sector': 'Financial Services'},
+            {'symbol': 'MA', 'name': 'Mastercard Inc.', 'sector': 'Financial Services'},
+
+            # Healthcare
+            {'symbol': 'JNJ', 'name': 'Johnson & Johnson', 'sector': 'Healthcare'},
+            {'symbol': 'UNH', 'name': 'UnitedHealth Group Inc.', 'sector': 'Healthcare'},
+            {'symbol': 'PFE', 'name': 'Pfizer Inc.', 'sector': 'Healthcare'},
+            {'symbol': 'ABBV', 'name': 'AbbVie Inc.', 'sector': 'Healthcare'},
+            {'symbol': 'MRK', 'name': 'Merck & Co. Inc.', 'sector': 'Healthcare'},
+            {'symbol': 'TMO', 'name': 'Thermo Fisher Scientific Inc.', 'sector': 'Healthcare'},
+
+            # Consumer Staples
+            {'symbol': 'PG', 'name': 'Procter & Gamble Co.', 'sector': 'Consumer Staples'},
+            {'symbol': 'KO', 'name': 'Coca-Cola Company', 'sector': 'Consumer Staples'},
+            {'symbol': 'PEP', 'name': 'PepsiCo Inc.', 'sector': 'Consumer Staples'},
+            {'symbol': 'WMT', 'name': 'Walmart Inc.', 'sector': 'Consumer Staples'},
+
+            # Energy
+            {'symbol': 'XOM', 'name': 'Exxon Mobil Corporation', 'sector': 'Energy'},
+            {'symbol': 'CVX', 'name': 'Chevron Corporation', 'sector': 'Energy'},
+            {'symbol': 'COP', 'name': 'ConocoPhillips', 'sector': 'Energy'},
+
+            # Growth/Emerging
+            {'symbol': 'AMD', 'name': 'Advanced Micro Devices Inc.', 'sector': 'Technology'},
+            {'symbol': 'INTC', 'name': 'Intel Corporation', 'sector': 'Technology'},
+            {'symbol': 'QCOM', 'name': 'QUALCOMM Inc.', 'sector': 'Technology'},
+            {'symbol': 'ADBE', 'name': 'Adobe Inc.', 'sector': 'Technology'},
+            {'symbol': 'CRM', 'name': 'Salesforce Inc.', 'sector': 'Technology'},
+            {'symbol': 'NOW', 'name': 'ServiceNow Inc.', 'sector': 'Technology'},
+            {'symbol': 'SNOW', 'name': 'Snowflake Inc.', 'sector': 'Technology'},
+            {'symbol': 'PLTR', 'name': 'Palantir Technologies Inc.', 'sector': 'Technology'},
+
+            # Retail/Consumer
+            {'symbol': 'HD', 'name': 'Home Depot Inc.', 'sector': 'Consumer Discretionary'},
+            {'symbol': 'NKE', 'name': 'Nike Inc.', 'sector': 'Consumer Discretionary'},
+            {'symbol': 'SBUX', 'name': 'Starbucks Corporation', 'sector': 'Consumer Discretionary'},
+
+            # Telecom/Penny Stocks Examples
+            {'symbol': 'LUMN', 'name': 'Lumen Technologies Inc.', 'sector': 'Communication Services'},
+            {'symbol': 'T', 'name': 'AT&T Inc.', 'sector': 'Communication Services'},
+            {'symbol': 'VZ', 'name': 'Verizon Communications Inc.', 'sector': 'Communication Services'},
+
+            # ETFs
+            {'symbol': 'SPY', 'name': 'SPDR S&P 500 ETF Trust', 'sector': 'ETF'},
+            {'symbol': 'QQQ', 'name': 'Invesco QQQ Trust', 'sector': 'ETF'},
+            {'symbol': 'IWM', 'name': 'iShares Russell 2000 ETF', 'sector': 'ETF'},
+        ]
+
+        return jsonify({
+            "status": "success",
+            "stocks": popular_stocks,
+            "count": len(popular_stocks)
+        })
+
+    except Exception as e:
+        logger.error(f"Error getting popular stocks: {e}")
+        return jsonify({"error": "Failed to get popular stocks"}), 500
+
 @app.route('/api/stocks/<symbol>')
 def get_stock_info(symbol):
     """Get detailed information about a specific stock"""

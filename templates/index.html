@@ -1642,6 +1642,9 @@
         // Watchlist Management - Initialize early to prevent errors
         let watchlist = JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
 
+        // Stock database for dropdown suggestions
+        let availableStocks = [];
+
         function openModal(type) {
             document.getElementById(type + 'Modal').style.display = 'block';
             // Clear any existing errors
@@ -1676,6 +1679,7 @@
             document.getElementById('dashboardUsername').textContent = currentUser.name;
             generateFeaturedOpportunities();
             updateWatchlistCount();
+            loadAvailableStocks(); // Load stocks for dropdown
 
             // Initialize elements after the main app is shown
             setTimeout(initializeElements, 100);
@@ -1908,12 +1912,42 @@
         // Enter key support
         // Event listeners are now handled in initializeElements()
 
+        // Load available stocks from backend
+        async function loadAvailableStocks() {
+            try {
+                const response = await fetch('/api/stocks/popular');
+                if (response.ok) {
+                    const data = await response.json();
+                    availableStocks = data.stocks || [];
+                    console.log(`Loaded ${availableStocks.length} stocks for dropdown`);
+                } else {
+                    console.error('Failed to load available stocks');
+                }
+            } catch (error) {
+                console.error('Error loading available stocks:', error);
+            }
+        }
+
         function showStockSuggestions(query) {
+            if (availableStocks.length === 0) {
+                // Load stocks if not already loaded
+                loadAvailableStocks();
+                return;
+            }
+
             const matches = [];
 
-            for (const [symbol, data] of Object.entries(stockDatabase)) {
-                if (symbol.startsWith(query) || data.name.toUpperCase().includes(query)) {
-                    matches.push({ symbol, data });
+            for (const stock of availableStocks) {
+                if (stock.symbol.startsWith(query) ||
+                    stock.name.toUpperCase().includes(query) ||
+                    stock.sector.toUpperCase().includes(query)) {
+                    matches.push({
+                        symbol: stock.symbol,
+                        data: {
+                            name: stock.name,
+                            sector: stock.sector
+                        }
+                    });
                 }
             }
 
@@ -2605,15 +2639,31 @@
             predictStock();
         }
 
-        // Featured Opportunities (using real API data)
+        // Featured Opportunities (smart algorithm for best growth + safety)
         async function generateFeaturedOpportunities() {
-            // Use a curated list of popular stocks for featured opportunities
-            const featuredSymbols = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'NVDA', 'AMZN'];
-            const featured = [];
+            // Comprehensive list of quality stocks across different categories
+            const stockCandidates = [
+                // Large Cap Tech (High Growth Potential)
+                'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'NFLX', 'CRM',
+                // Large Cap Stable (Safety + Growth)
+                'JNJ', 'PG', 'KO', 'PEP', 'WMT', 'HD', 'V', 'MA',
+                // Growth Stocks (High Potential)
+                'TSLA', 'SHOP', 'SQ', 'ROKU', 'ZM', 'PTON', 'PLTR',
+                // Financial (Stable Growth)
+                'JPM', 'BAC', 'GS', 'MS', 'WFC', 'C',
+                // Healthcare (Defensive Growth)
+                'UNH', 'ABBV', 'PFE', 'MRK', 'TMO', 'DHR',
+                // Energy (Value + Growth)
+                'XOM', 'CVX', 'COP', 'EOG', 'SLB',
+                // Emerging/Mid-Cap Opportunities
+                'AMD', 'INTC', 'QCOM', 'ADBE', 'NOW', 'SNOW'
+            ];
+
+            const candidates = [];
 
             try {
-                // Get real predictions for featured stocks
-                for (const symbol of featuredSymbols.slice(0, 4)) { // Show top 4
+                // Analyze a broader set of stocks to find the best opportunities
+                for (const symbol of stockCandidates.slice(0, 20)) { // Analyze top 20 candidates
                     try {
                         const response = await fetch('/api/predict', {
                             method: 'POST',
@@ -2628,8 +2678,12 @@
 
                         if (response.ok) {
                             const prediction = await response.json();
-                            if (!prediction.error) {
-                                featured.push({
+                            if (!prediction.error && prediction.expected_change_percent > 0) {
+                                const safetyScore = calculateSafetyScore(prediction);
+                                const growthScore = calculateGrowthScore(prediction);
+                                const overallScore = (safetyScore * 0.6) + (growthScore * 0.4); // Weight safety higher
+
+                                candidates.push({
                                     symbol: prediction.symbol,
                                     data: {
                                         name: prediction.company_name,
@@ -2641,9 +2695,12 @@
                                         upside: prediction.expected_change_percent,
                                         confidence: prediction.confidence,
                                         prediction: prediction.prediction,
-                                        timeframe: prediction.timeframe
+                                        timeframe: prediction.timeframe,
+                                        safetyScore: safetyScore,
+                                        growthScore: growthScore,
+                                        overallScore: overallScore
                                     },
-                                    reasoning: prediction.reasoning || 'AI analysis based on technical indicators'
+                                    reasoning: generateOpportunityReasoning(prediction)
                                 });
                             }
                         }
@@ -2652,12 +2709,81 @@
                     }
                 }
 
-                displayFeaturedOpportunities(featured);
+                // Sort by overall score (safety + growth) and take top 4
+                candidates.sort((a, b) => b.analysis.overallScore - a.analysis.overallScore);
+                const topOpportunities = candidates.slice(0, 4);
+
+                displayFeaturedOpportunities(topOpportunities);
             } catch (error) {
                 console.error('Error generating featured opportunities:', error);
-                // Fallback to simple display
                 displayFeaturedOpportunities([]);
             }
+        }
+
+        function calculateSafetyScore(prediction) {
+            let score = 0;
+
+            // Market cap safety (larger = safer)
+            if (prediction.market_cap > 100000000000) score += 30; // >$100B
+            else if (prediction.market_cap > 10000000000) score += 20; // >$10B
+            else if (prediction.market_cap > 1000000000) score += 10; // >$1B
+
+            // Confidence level
+            score += prediction.confidence * 0.4; // Max 40 points
+
+            // Sector safety
+            const safeSectors = ['Technology', 'Healthcare', 'Consumer Staples', 'Utilities'];
+            if (safeSectors.includes(prediction.sector)) score += 15;
+
+            // Avoid penny stocks
+            if (!prediction.is_penny_stock) score += 15;
+
+            return Math.min(score, 100);
+        }
+
+        function calculateGrowthScore(prediction) {
+            let score = 0;
+
+            // Expected growth (capped to avoid unrealistic scores)
+            const cappedGrowth = Math.min(prediction.expected_change_percent, 50);
+            score += cappedGrowth * 1.5; // Max 75 points for 50% growth
+
+            // Growth sectors bonus
+            const growthSectors = ['Technology', 'Healthcare', 'Consumer Discretionary'];
+            if (growthSectors.includes(prediction.sector)) score += 15;
+
+            // Buy signal bonus
+            if (prediction.prediction.includes('BUY')) score += 10;
+
+            return Math.min(score, 100);
+        }
+
+        function generateOpportunityReasoning(prediction) {
+            const reasons = [];
+
+            if (prediction.confidence > 80) {
+                reasons.push("High AI confidence");
+            }
+
+            if (prediction.market_cap > 50000000000) {
+                reasons.push("Large cap stability");
+            }
+
+            if (prediction.expected_change_percent > 10) {
+                reasons.push("Strong growth potential");
+            }
+
+            if (prediction.sector === 'Technology') {
+                reasons.push("Tech sector leadership");
+            } else if (prediction.sector === 'Healthcare') {
+                reasons.push("Defensive healthcare play");
+            }
+
+            if (prediction.prediction.includes('BUY')) {
+                reasons.push("AI buy signal");
+            }
+
+            return reasons.length > 0 ? reasons.join(" • ") : "AI-identified opportunity";
         }
 
         function generateSimpleReasoning(symbol, data) {
