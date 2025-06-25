@@ -1915,11 +1915,23 @@
         // Load available stocks from backend
         async function loadAvailableStocks() {
             try {
-                const response = await fetch('/api/stocks/popular');
+                const response = await fetch('/api/stocks/all?limit=1000');
                 if (response.ok) {
                     const data = await response.json();
                     availableStocks = data.stocks || [];
-                    console.log(`Loaded ${availableStocks.length} stocks for dropdown`);
+                    console.log(`Loaded ${availableStocks.length} stocks for dropdown (source: ${data.source})`);
+
+                    // Sort stocks for better user experience
+                    availableStocks.sort((a, b) => {
+                        // Popular stocks first, then alphabetical
+                        const popularSymbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META'];
+                        const aPopular = popularSymbols.includes(a.symbol);
+                        const bPopular = popularSymbols.includes(b.symbol);
+
+                        if (aPopular && !bPopular) return -1;
+                        if (!aPopular && bPopular) return 1;
+                        return a.symbol.localeCompare(b.symbol);
+                    });
                 } else {
                     console.error('Failed to load available stocks');
                 }
