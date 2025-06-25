@@ -173,7 +173,7 @@ def register():
 
 @app.route('/api/health')
 def health():
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat(), "version": "2.0"})
 
 if __name__ == '__main__':
     import os
