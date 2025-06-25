@@ -98,8 +98,36 @@
         .input-group {
             display: flex;
             gap: 15px;
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
+            align-items: flex-end;
+        }
+
+        .timeframe-selector {
+            min-width: 200px;
+        }
+
+        .timeframe-select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .timeframe-select:focus {
+            outline: none;
+            border-color: #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .timeframe-select option {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 10px;
         }
 
         .input-wrapper {
@@ -1359,6 +1387,19 @@
                                 <input type="text" id="stockSymbol" class="stock-input" placeholder="Enter Stock Symbol (e.g., AAPL, TSLA)" maxlength="10" autocomplete="off">
                                 <div id="stockDropdown" class="stock-dropdown"></div>
                             </div>
+                            <div class="timeframe-selector">
+                                <label for="timeframeSelect" style="color: #ccc; margin-bottom: 5px; display: block;">
+                                    <i class="fas fa-clock"></i> Prediction Timeframe:
+                                </label>
+                                <select id="timeframeSelect" class="timeframe-select">
+                                    <option value="auto">Auto (AI Recommended)</option>
+                                    <option value="1month">1 Month</option>
+                                    <option value="3months">3 Months</option>
+                                    <option value="6months">6 Months</option>
+                                    <option value="1year">1 Year</option>
+                                    <option value="2years">2 Years</option>
+                                </select>
+                            </div>
                             <button id="predictBtn" class="predict-btn">
                                 <i class="fas fa-brain"></i>
                                 Analyze
@@ -2097,7 +2138,8 @@
             }
 
             const symbol = stockInput.value.trim().toUpperCase();
-            console.log('Symbol entered:', symbol); // Debug log
+            const timeframe = document.getElementById('timeframeSelect').value;
+            console.log('Symbol entered:', symbol, 'Timeframe:', timeframe); // Debug log
 
             if (!symbol) {
                 showError('Please enter a stock symbol');
@@ -2119,7 +2161,10 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ symbol: symbol })
+                    body: JSON.stringify({
+                        symbol: symbol,
+                        timeframe: timeframe
+                    })
                 });
 
                 console.log('API response status:', response.status);
@@ -2560,33 +2605,59 @@
             predictStock();
         }
 
-        // Featured Opportunities (realistic and curated)
-        function generateFeaturedOpportunities() {
+        // Featured Opportunities (using real API data)
+        async function generateFeaturedOpportunities() {
+            // Use a curated list of popular stocks for featured opportunities
+            const featuredSymbols = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'NVDA', 'AMZN'];
             const featured = [];
 
-            // Analyze all stocks and find realistic opportunities
-            const candidates = [];
-            for (const [symbol, data] of Object.entries(stockDatabase)) {
-                if (data.sector === 'ETF') continue; // Skip ETFs
+            try {
+                // Get real predictions for featured stocks
+                for (const symbol of featuredSymbols.slice(0, 4)) { // Show top 4
+                    try {
+                        const response = await fetch('/api/predict', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                symbol: symbol,
+                                timeframe: 'auto'
+                            })
+                        });
 
-                const analysis = calculateIntrinsicValue(symbol, data);
-
-                // Only include stocks with realistic upside (5-25%)
-                if (analysis.upside >= 5 && analysis.upside <= 25 && analysis.confidence >= 70) {
-                    candidates.push({
-                        symbol,
-                        data,
-                        analysis,
-                        reasoning: generateSimpleReasoning(symbol, data)
-                    });
+                        if (response.ok) {
+                            const prediction = await response.json();
+                            if (!prediction.error) {
+                                featured.push({
+                                    symbol: prediction.symbol,
+                                    data: {
+                                        name: prediction.company_name,
+                                        price: prediction.current_price,
+                                        sector: prediction.sector,
+                                        marketCap: prediction.market_cap
+                                    },
+                                    analysis: {
+                                        upside: prediction.expected_change_percent,
+                                        confidence: prediction.confidence,
+                                        prediction: prediction.prediction,
+                                        timeframe: prediction.timeframe
+                                    },
+                                    reasoning: prediction.reasoning || 'AI analysis based on technical indicators'
+                                });
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching data for ${symbol}:`, error);
+                    }
                 }
+
+                displayFeaturedOpportunities(featured);
+            } catch (error) {
+                console.error('Error generating featured opportunities:', error);
+                // Fallback to simple display
+                displayFeaturedOpportunities([]);
             }
-
-            // Sort by upside and take top 4 realistic opportunities
-            candidates.sort((a, b) => b.analysis.upside - a.analysis.upside);
-            const topCandidates = candidates.slice(0, 4);
-
-            displayFeaturedOpportunities(topCandidates);
         }
 
         function generateSimpleReasoning(symbol, data) {
@@ -2600,20 +2671,31 @@
         function displayFeaturedOpportunities(featured) {
             const grid = document.getElementById('featuredGrid');
 
+            if (featured.length === 0) {
+                grid.innerHTML = `
+                    <div style="text-align: center; color: #888; padding: 40px;">
+                        <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                        <p>Loading featured opportunities...</p>
+                    </div>
+                `;
+                return;
+            }
+
             grid.innerHTML = featured.map(item => {
-                const hasRisks = item.analysis.risk_factors && item.analysis.risk_factors.length > 0;
-                const riskBadge = hasRisks ? `<span class="risk-badge">⚠️ High Risk</span>` : '';
+                const changeClass = item.analysis.upside > 0 ? 'positive' : 'negative';
+                const changeSign = item.analysis.upside > 0 ? '+' : '';
 
                 return `
                     <div class="featured-card" onclick="analyzeFeatured('${item.symbol}')">
                         <div class="featured-header">
                             <div class="featured-symbol">${item.symbol}</div>
-                            <div class="featured-upside">+${item.analysis.upside}%</div>
+                            <div class="featured-upside ${changeClass}">${changeSign}${item.analysis.upside.toFixed(1)}%</div>
                         </div>
                         <div class="featured-company">${item.data.name}</div>
-                        <div class="featured-price">$${item.data.price}</div>
+                        <div class="featured-price">$${item.data.price.toFixed(2)}</div>
+                        <div class="featured-prediction">${item.analysis.prediction}</div>
+                        <div class="featured-timeframe">${item.analysis.timeframe}</div>
                         <div class="featured-reason">${item.reasoning}</div>
-                        ${riskBadge}
                     </div>
                 `;
             }).join('');

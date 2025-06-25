@@ -577,6 +577,17 @@ class StockPredictor:
                 return "3-12 months"
             else:
                 return "6-18 months"
+
+    def _convert_timeframe_option(self, option):
+        """Convert frontend timeframe option to display string"""
+        timeframe_map = {
+            '1month': '1 month',
+            '3months': '3 months',
+            '6months': '6 months',
+            '1year': '1 year',
+            '2years': '2 years'
+        }
+        return timeframe_map.get(option, '3 months')
     
     def get_stock_data(self, symbol, period="1y"):
         """Fetch stock data using yfinance with enhanced error handling"""
@@ -649,8 +660,8 @@ class StockPredictor:
             'volume': int(latest['Volume'])
         }
     
-    def predict_stock_movement(self, symbol):
-        """Main prediction function"""
+    def predict_stock_movement(self, symbol, timeframe_override=None):
+        """Main prediction function with optional timeframe override"""
         try:
             # Get stock data
             data, info = self.get_stock_data(symbol)
@@ -715,7 +726,13 @@ class StockPredictor:
             })
 
             # Calculate confidence and timeframe
-            confidence, timeframe = self.calculate_confidence_and_timeframe(stock_data, indicators)
+            confidence, auto_timeframe = self.calculate_confidence_and_timeframe(stock_data, indicators)
+
+            # Use manual timeframe override if provided, otherwise use AI recommendation
+            if timeframe_override and timeframe_override != 'auto':
+                timeframe = self._convert_timeframe_option(timeframe_override)
+            else:
+                timeframe = auto_timeframe
 
             # Enhanced prediction logic based on stock category
             category = self.get_stock_category(stock_data)
@@ -1067,12 +1084,13 @@ def predict():
         logger.info(f"Request data: {data}")
 
         symbol = data.get('symbol', '').strip().upper()
-        logger.info(f"Processing symbol: {symbol}")
+        timeframe = data.get('timeframe', 'auto')
+        logger.info(f"Processing symbol: {symbol}, timeframe: {timeframe}")
 
         if not symbol:
             return jsonify({"error": "Stock symbol is required"}), 400
 
-        prediction = predictor.predict_stock_movement(symbol)
+        prediction = predictor.predict_stock_movement(symbol, timeframe)
         logger.info(f"Prediction result: {prediction}")
 
         return jsonify(prediction)
