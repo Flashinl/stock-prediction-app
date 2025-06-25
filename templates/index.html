@@ -1598,6 +1598,9 @@
             showMainApp();
         }
 
+        // Watchlist Management - Initialize early to prevent errors
+        let watchlist = JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
+
         function openModal(type) {
             document.getElementById(type + 'Modal').style.display = 'block';
             // Clear any existing errors
@@ -2354,19 +2357,19 @@
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">MACD:</span>
-                            <span class="indicator-value">${data.technical_indicators.macd}</span>
+                            <span class="indicator-value">${data.technical_indicators?.macd?.toFixed(4) || 'N/A'}</span>
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">Bollinger Upper:</span>
-                            <span class="indicator-value">$${data.technical_indicators.bollinger_upper}</span>
+                            <span class="indicator-value">$${data.technical_indicators?.bollinger_upper?.toFixed(2) || 'N/A'}</span>
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">Bollinger Lower:</span>
-                            <span class="indicator-value">$${data.technical_indicators.bollinger_lower}</span>
+                            <span class="indicator-value">$${data.technical_indicators?.bollinger_lower?.toFixed(2) || 'N/A'}</span>
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">Volume:</span>
-                            <span class="indicator-value">${data.volume.toLocaleString()}</span>
+                            <span class="indicator-value">${data.technical_indicators?.volume?.toLocaleString() || 'N/A'}</span>
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">Volatility:</span>
@@ -2447,9 +2450,7 @@
             }
         }
 
-        // Watchlist Management
-        let watchlist = JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
-
+        // Watchlist Management Functions
         function addToWatchlist(symbol, data, prediction) {
             const existingIndex = watchlist.findIndex(item => item.symbol === symbol);
             const watchlistItem = {
