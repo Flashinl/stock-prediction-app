@@ -1,0 +1,21 @@
+# Web framework
+Flask>=2.3.0
+Flask-CORS>=4.0.0
+
+# Data manipulation and analysis
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Financial data
+yfinance>=0.2.18
+
+# Configuration and utilities
+python-dotenv>=1.0.0
+
+# Production server
+gunicorn>=21.2.0
+
+# Optional: For future LLM integration
+# torch>=2.0.0
+# transformers>=4.30.0
+# openai>=0.27.0
