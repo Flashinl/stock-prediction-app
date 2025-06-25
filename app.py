@@ -134,16 +134,42 @@ def predict():
     try:
         data = request.get_json()
         symbol = data.get('symbol', '').strip().upper()
-        
+
         if not symbol:
             return jsonify({"error": "Stock symbol is required"}), 400
-        
+
         prediction = predictor.predict_stock_movement(symbol)
         return jsonify(prediction)
-    
+
     except Exception as e:
         logger.error(f"API error: {e}")
         return jsonify({"error": "Internal server error"}), 500
+
+# Additional routes for the advanced frontend features
+@app.route('/api/watchlist', methods=['GET', 'POST', 'DELETE'])
+def watchlist():
+    """Handle watchlist operations (future enhancement for server-side storage)"""
+    if request.method == 'GET':
+        # For now, return empty - frontend uses localStorage
+        return jsonify([])
+    elif request.method == 'POST':
+        # Future: Save to database
+        return jsonify({"status": "success"})
+    elif request.method == 'DELETE':
+        # Future: Remove from database
+        return jsonify({"status": "success"})
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Handle user authentication (future enhancement)"""
+    # For now, return success - frontend uses localStorage
+    return jsonify({"status": "success", "message": "Login successful"})
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Handle user registration (future enhancement)"""
+    # For now, return success - frontend uses localStorage
+    return jsonify({"status": "success", "message": "Registration successful"})
 
 @app.route('/api/health')
 def health():
