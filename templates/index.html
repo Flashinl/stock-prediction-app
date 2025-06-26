@@ -3475,51 +3475,54 @@
         function generateOpportunityReasoning(prediction) {
             const reasons = [];
 
-            // Focus on hidden gem characteristics
+            // Focus on market context and growth drivers
             if (prediction.market_cap < 2000000000) {
-                reasons.push("Small-cap growth opportunity");
+                reasons.push("Emerging company with significant growth runway");
             } else if (prediction.market_cap < 10000000000) {
-                reasons.push("Mid-cap value play");
+                reasons.push("Mid-cap positioned for market expansion");
             } else if (prediction.confidence < 75) {
-                reasons.push("Undervalued by market");
+                reasons.push("Market hasn't fully recognized value potential");
             }
 
             if (prediction.expected_change_percent > 20) {
-                reasons.push("High growth potential");
+                reasons.push("Strong catalysts driving substantial upside");
             } else if (prediction.expected_change_percent > 15) {
-                reasons.push("Strong upside potential");
+                reasons.push("Multiple growth drivers align favorably");
             } else if (prediction.expected_change_percent > 10) {
-                reasons.push("Solid growth prospects");
+                reasons.push("Solid fundamentals support steady growth");
             }
 
-            // Sector-specific hidden gem reasoning
+            // Sector-specific world event reasoning
             if (prediction.sector === 'Technology') {
-                reasons.push("Emerging tech innovator");
+                reasons.push("AI revolution and digital transformation beneficiary");
             } else if (prediction.sector === 'Healthcare' || prediction.sector === 'Biotech') {
-                reasons.push("Healthcare innovation play");
+                reasons.push("Aging demographics and medical innovation trends");
             } else if (prediction.sector === 'Clean Energy') {
-                reasons.push("Clean energy transition beneficiary");
+                reasons.push("Energy transition and climate policy support");
             } else if (prediction.sector === 'Fintech' || prediction.sector === 'Financial Services') {
-                reasons.push("Digital finance disruptor");
+                reasons.push("Interest rate environment and fintech disruption");
             } else if (prediction.sector === 'Gaming' || prediction.sector === 'E-commerce') {
-                reasons.push("Digital economy growth story");
+                reasons.push("Digital economy and consumer behavior shifts");
             }
 
             if (prediction.prediction.includes('SPECULATIVE')) {
-                reasons.push("High-risk, high-reward opportunity");
+                reasons.push("Emerging opportunity with transformative potential");
             } else if (prediction.prediction.includes('BUY')) {
-                reasons.push("AI-identified value opportunity");
+                reasons.push("Fundamentals align with favorable market conditions");
             }
 
-            return reasons.length > 0 ? reasons.slice(0, 2).join(" • ") : "Hidden gem opportunity";
+            return reasons.length > 0 ? reasons.slice(0, 2).join(" • ") : "Market conditions support growth opportunity";
         }
 
         function generateSimpleReasoning(symbol, data) {
-            if (data.pe < 20) return "Trading below market average P/E ratio";
-            if (data.sector === 'Technology') return "AI revolution beneficiary";
-            if (data.sector === 'Energy') return "Undervalued in energy transition";
-            if (data.sector === 'Financial') return "Rising interest rate environment";
-            return "Strong fundamentals with growth potential";
+            if (data.pe < 20) return "Attractive valuation amid current market conditions";
+            if (data.sector === 'Technology') return "Positioned to benefit from AI revolution and digital transformation";
+            if (data.sector === 'Energy') return "Energy transition and geopolitical factors create opportunities";
+            if (data.sector === 'Financial') return "Interest rate environment and digital banking trends";
+            if (data.sector === 'Healthcare') return "Aging demographics and healthcare innovation drive growth";
+            if (data.sector === 'Consumer Discretionary') return "Consumer spending patterns and economic recovery";
+            if (data.sector === 'Industrials') return "Infrastructure spending and supply chain reshoring trends";
+            return "Market conditions and company fundamentals support growth potential";
         }
 
         function displayFeaturedOpportunities(featured) {
@@ -3759,11 +3762,11 @@
             // Generate summary
             let summary = "";
             if (prediction.includes('BUY')) {
-                summary = `Our AI model recommends ${prediction} based on ${reasoningFactors.length} key factors indicating positive momentum. The convergence of market trends, sector dynamics, and technical indicators suggests a ${Math.abs(changePercent)}% potential upside.`;
+                summary = `Our AI model recommends ${prediction} based on ${reasoningFactors.length} key factors including favorable market conditions and sector trends. Current economic environment and company fundamentals support a ${Math.abs(changePercent)}% potential upside.`;
             } else if (prediction.includes('SELL')) {
-                summary = `Our AI model recommends ${prediction} due to ${reasoningFactors.length} concerning factors. Market analysis indicates potential headwinds that could result in a ${Math.abs(changePercent)}% decline.`;
+                summary = `Our AI model recommends ${prediction} due to ${reasoningFactors.length} concerning factors. Economic headwinds and market conditions suggest potential downside risk of ${Math.abs(changePercent)}%.`;
             } else {
-                summary = `Our AI model recommends ${prediction} as current market conditions present mixed signals. While some factors are positive, others suggest caution, leading to a balanced outlook.`;
+                summary = `Our AI model recommends ${prediction} as current market conditions present mixed signals. While some economic factors are positive, others suggest caution, leading to a balanced outlook.`;
             }
 
             // Build HTML

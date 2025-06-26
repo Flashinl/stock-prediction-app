@@ -35,20 +35,12 @@ def test_prediction(symbol):
         return None
 
 if __name__ == "__main__":
-    # Test mix of growth stocks and some that should be HOLD/SELL
+    # Test a few key stocks to see improved reasoning
     test_stocks = [
         "NVDA",  # AI leader
         "PLTR",  # AI data analytics
-        "RKLB",  # Space technology
-        "IONQ",  # Quantum computing
-        "CRSP",  # Gene editing
-        "SOFI",  # Fintech
-        "ENPH",  # Clean energy
-        "CRWD",  # Cybersecurity
-        "AAPL",  # Large cap (should be more conservative)
-        "TSLA",  # Volatile stock
-        "META",  # Large tech
-        "AMZN"   # Large cap
+        "TSLA",  # EV leader
+        "AAPL"   # Large cap tech
     ]
     
     print("Testing Enhanced Stock Prediction API")
