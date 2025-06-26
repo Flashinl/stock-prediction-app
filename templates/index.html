@@ -2804,6 +2804,9 @@
             } else if (tabName === 'analysis') {
                 // Reinitialize elements when switching to analysis tab
                 setTimeout(initializeElements, 50);
+            } else if (tabName === 'dashboard') {
+                // Load dashboard stats when switching to dashboard
+                loadDashboardStats();
             }
         }
 
@@ -2927,14 +2930,15 @@
                         <span class="${changeClass}">${currentValue.toFixed(0)}</span>
                         <small style="font-size: 0.7em; display: block;">${changeSign}${changePercent}%</small>
                     `;
-                    console.log('S&P 500 data loaded');
+                    console.log('S&P 500 data loaded successfully');
                 } else {
                     console.error('sp500Value element not found');
                 }
-            }, 500);
+            }, 100); // Reduced timeout
         }
 
         function loadVIXData() {
+            console.log('Loading VIX data...');
             // Realistic VIX data simulation
             const vixValue = (Math.random() * 25 + 12).toFixed(1); // Random between 12-37
             let vixLabel = 'Low Fear';
@@ -2949,11 +2953,17 @@
             }
 
             setTimeout(() => {
-                document.getElementById('vixValue').innerHTML = `
-                    <span class="${vixClass}">${vixValue}</span>
-                    <small style="font-size: 0.7em; display: block;">${vixLabel}</small>
-                `;
-            }, 800);
+                const element = document.getElementById('vixValue');
+                if (element) {
+                    element.innerHTML = `
+                        <span class="${vixClass}">${vixValue}</span>
+                        <small style="font-size: 0.7em; display: block;">${vixLabel}</small>
+                    `;
+                    console.log('VIX data loaded successfully');
+                } else {
+                    console.error('vixValue element not found');
+                }
+            }, 200); // Reduced timeout
         }
 
         function loadActiveSignals() {
@@ -2968,14 +2978,15 @@
                         <span class="positive">${signalCount}</span>
                         <small style="font-size: 0.7em; display: block;">Strong Buys</small>
                     `;
-                    console.log('Active signals loaded');
+                    console.log('Active signals loaded successfully');
                 } else {
                     console.error('activeSignals element not found');
                 }
-            }, 1200);
+            }, 300); // Reduced timeout
         }
 
         function loadMarketSentiment() {
+            console.log('Loading market sentiment...');
             // Realistic market sentiment with bias toward positive
             const sentiments = [
                 { label: 'Bullish', class: 'positive', emoji: '🐂', weight: 0.5 },
@@ -2990,14 +3001,21 @@
             else sentiment = sentiments[2]; // Bearish
 
             setTimeout(() => {
-                document.getElementById('marketSentiment').innerHTML = `
-                    <span class="${sentiment.class}">${sentiment.emoji}</span>
-                    <small style="font-size: 0.7em; display: block;">${sentiment.label}</small>
-                `;
-            }, 600);
+                const element = document.getElementById('marketSentiment');
+                if (element) {
+                    element.innerHTML = `
+                        <span class="${sentiment.class}">${sentiment.emoji}</span>
+                        <small style="font-size: 0.7em; display: block;">${sentiment.label}</small>
+                    `;
+                    console.log('Market sentiment loaded successfully');
+                } else {
+                    console.error('marketSentiment element not found');
+                }
+            }, 400); // Reduced timeout
         }
 
         function loadTopSector() {
+            console.log('Loading top sector...');
             // Realistic sector performance
             const sectors = [
                 { name: 'Technology', change: '+2.8%' },
@@ -3010,30 +3028,46 @@
             const topSector = sectors[Math.floor(Math.random() * sectors.length)];
 
             setTimeout(() => {
-                document.getElementById('topSector').innerHTML = `
-                    <span class="positive">${topSector.name}</span>
-                    <small style="font-size: 0.7em; display: block;">${topSector.change}</small>
-                `;
-            }, 1000);
+                const element = document.getElementById('topSector');
+                if (element) {
+                    element.innerHTML = `
+                        <span class="positive">${topSector.name}</span>
+                        <small style="font-size: 0.7em; display: block;">${topSector.change}</small>
+                    `;
+                    console.log('Top sector loaded successfully');
+                } else {
+                    console.error('topSector element not found');
+                }
+            }, 500); // Reduced timeout
         }
 
         function loadAIConfidence() {
-            // Realistic AI confidence level
-            const confidence = Math.floor(Math.random() * 15 + 82); // Random between 82-97
-            let confidenceLabel = 'Very High';
+            console.log('Loading AI confidence...');
+            // More realistic AI confidence level (reduced from overly high values)
+            const confidence = Math.floor(Math.random() * 20 + 65); // Random between 65-85 (more realistic)
+            let confidenceLabel = 'High';
             let confidenceClass = 'positive';
 
-            if (confidence < 85) {
-                confidenceLabel = 'High';
+            if (confidence < 70) {
+                confidenceLabel = 'Moderate';
                 confidenceClass = 'neutral';
+            } else if (confidence > 80) {
+                confidenceLabel = 'Very High';
+                confidenceClass = 'positive';
             }
 
             setTimeout(() => {
-                document.getElementById('aiConfidence').innerHTML = `
-                    <span class="${confidenceClass}">${confidence}%</span>
-                    <small style="font-size: 0.7em; display: block;">${confidenceLabel}</small>
-                `;
-            }, 1400);
+                const element = document.getElementById('aiConfidence');
+                if (element) {
+                    element.innerHTML = `
+                        <span class="${confidenceClass}">${confidence}%</span>
+                        <small style="font-size: 0.7em; display: block;">${confidenceLabel}</small>
+                    `;
+                    console.log('AI confidence loaded successfully');
+                } else {
+                    console.error('aiConfidence element not found');
+                }
+            }, 600); // Reduced timeout
         }
 
         // Featured Opportunities (smart algorithm for best growth + safety)
@@ -3049,24 +3083,32 @@
                 </div>
             `;
 
-            // High-growth potential stocks prioritized for strong buy recommendations
+            // Hidden Gems & Undervalued Opportunities (Focus on Small-Mid Cap Growth)
             const stockCandidates = [
-                // AI & Next-Gen Tech (Highest Growth Potential)
-                'NVDA', 'AMD', 'PLTR', 'SNOW', 'CRWD', 'ZS', 'NET', 'DDOG',
-                // Emerging Growth Leaders
-                'RBLX', 'COIN', 'HOOD', 'SOFI', 'AFRM', 'UPST', 'SQ', 'SHOP',
-                // Biotech Innovation (High Upside)
-                'MRNA', 'BNTX', 'VRTX', 'REGN', 'ILMN', 'ISRG', 'NVAX', 'GILD',
-                // Clean Energy Revolution
-                'TSLA', 'ENPH', 'SEDG', 'PLUG', 'FCEL', 'BE', 'RIVN', 'LCID',
-                // Cloud & SaaS Disruptors
-                'CRM', 'NOW', 'MDB', 'ESTC', 'SPLK', 'WDAY', 'OKTA', 'ZM',
-                // High-Growth Consumer & E-commerce
-                'LULU', 'NKE', 'SBUX', 'CMG', 'ETSY', 'CHWY', 'PTON', 'ROKU',
-                // Established Tech with Growth
-                'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NFLX', 'ADBE', 'CRM',
+                // Small-Cap Tech Innovators & Cybersecurity
+                'PLTR', 'SNOW', 'CRWD', 'ZS', 'NET', 'DDOG', 'OKTA', 'ESTC', 'MDB', 'SPLK', 'S', 'PANW', 'FTNT', 'CYBR',
+                // Emerging Fintech & Digital Banking
+                'SOFI', 'AFRM', 'UPST', 'HOOD', 'SQ', 'COIN', 'LC', 'OPEN', 'RDFN', 'BILL', 'PAYO', 'FLYW', 'STNE', 'NU',
+                // Biotech & Healthcare Innovation
+                'MRNA', 'BNTX', 'NVAX', 'VRTX', 'REGN', 'ILMN', 'ISRG', 'TDOC', 'VEEV', 'DXCM', 'CRSP', 'EDIT', 'BEAM', 'NTLA',
+                // Clean Energy & Sustainability
+                'ENPH', 'SEDG', 'PLUG', 'FCEL', 'BE', 'RIVN', 'LCID', 'CHPT', 'BLNK', 'QS', 'NOVA', 'RUN', 'SPWR', 'MAXN',
+                // E-commerce & Consumer Disruptors
+                'ETSY', 'CHWY', 'PTON', 'ROKU', 'RBLX', 'U', 'FUBO', 'SPOT', 'PINS', 'SNAP', 'TWTR', 'MTCH', 'BMBL', 'YELP',
+                // Industrial & Materials Innovation
+                'RKLB', 'SPCE', 'PLD', 'EXR', 'COLD', 'STAG', 'FR', 'AMT', 'CCI', 'SBAC', 'CARR', 'OTIS', 'XYL', 'WAT',
                 // Gaming & Digital Entertainment
-                'EA', 'ATVI', 'TTWO', 'DIS', 'FUBO', 'U'
+                'EA', 'TTWO', 'RBLX', 'U', 'FUBO', 'DKNG', 'PENN', 'SPOT', 'ROKU', 'NFLX', 'DIS', 'PARA', 'WBD', 'LYV',
+                // Emerging Growth Sectors & SaaS
+                'ABNB', 'UBER', 'LYFT', 'DASH', 'SHOP', 'WDAY', 'NOW', 'ZM', 'DOCU', 'TWLO', 'TEAM', 'ATLASSIAN', 'HUBS', 'ZI',
+                // Small-Cap Value & Consumer
+                'LULU', 'NKE', 'SBUX', 'CMG', 'FIVE', 'ULTA', 'TJX', 'ROST', 'COST', 'BJ', 'DLTR', 'DG', 'POOL', 'WSM',
+                // Emerging Markets & International
+                'BABA', 'JD', 'PDD', 'BIDU', 'NIO', 'XPEV', 'LI', 'GRAB', 'SE', 'MELI', 'GLOB', 'CPNG', 'BEKE', 'TME',
+                // REITs & Infrastructure
+                'EQIX', 'DLR', 'CCI', 'AMT', 'SBAC', 'PSA', 'EXR', 'AVB', 'EQR', 'MAA', 'UDR', 'CPT', 'ESS', 'AIV',
+                // Specialty Retail & Services
+                'CHWY', 'ETSY', 'W', 'FTCH', 'RH', 'CVNA', 'CARG', 'KMX', 'AN', 'LAD', 'ABG', 'GPI', 'SAH', 'PAG'
             ];
 
             const candidates = [];
@@ -3091,14 +3133,15 @@
                             const prediction = await response.json();
                             console.log(`Prediction for ${symbol}:`, prediction);
 
-                            // Include BUY/STRONG BUY recommendations with reasonable growth potential
+                            // Include BUY/STRONG BUY recommendations with growth potential (more inclusive for hidden gems)
                             if (!prediction.error &&
-                                prediction.expected_change_percent >= 5 &&
-                                prediction.confidence >= 65 &&
-                                (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG'))) {
+                                prediction.expected_change_percent >= 3 && // Lower threshold for hidden gems
+                                prediction.confidence >= 55 && // Lower confidence requirement to find undervalued stocks
+                                (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG') || prediction.prediction.includes('SPECULATIVE'))) {
                                 const safetyScore = calculateSafetyScore(prediction);
                                 const growthScore = calculateGrowthScore(prediction);
-                                const overallScore = (safetyScore * 0.35) + (growthScore * 0.65); // Favor growth potential while maintaining safety
+                                const hiddenGemScore = calculateHiddenGemScore(prediction); // New scoring for hidden gems
+                                const overallScore = (safetyScore * 0.2) + (growthScore * 0.5) + (hiddenGemScore * 0.3); // Favor growth and hidden gem potential
 
                                 candidates.push({
                                     symbol: prediction.symbol,
@@ -3115,6 +3158,7 @@
                                         timeframe: prediction.timeframe,
                                         safetyScore: safetyScore,
                                         growthScore: growthScore,
+                                        hiddenGemScore: hiddenGemScore,
                                         overallScore: overallScore
                                     },
                                     reasoning: generateOpportunityReasoning(prediction)
@@ -3148,13 +3192,14 @@
                             if (response.ok) {
                                 const prediction = await response.json();
                                 if (!prediction.error &&
-                                    prediction.expected_change_percent >= 3 &&
-                                    prediction.confidence >= 60 &&
-                                    (prediction.prediction.includes('BUY') || prediction.prediction.includes('HOLD'))) {
+                                    prediction.expected_change_percent >= 2 && // Even lower threshold for backup
+                                    prediction.confidence >= 50 && // Lower confidence for hidden gems
+                                    (prediction.prediction.includes('BUY') || prediction.prediction.includes('HOLD') || prediction.prediction.includes('SPECULATIVE'))) {
 
                                     const safetyScore = calculateSafetyScore(prediction);
                                     const growthScore = calculateGrowthScore(prediction);
-                                    const overallScore = (safetyScore * 0.35) + (growthScore * 0.65);
+                                    const hiddenGemScore = calculateHiddenGemScore(prediction);
+                                    const overallScore = (safetyScore * 0.2) + (growthScore * 0.5) + (hiddenGemScore * 0.3);
 
                                     candidates.push({
                                         symbol: prediction.symbol,
@@ -3171,6 +3216,7 @@
                                             timeframe: prediction.timeframe,
                                             safetyScore: safetyScore,
                                             growthScore: growthScore,
+                                            hiddenGemScore: hiddenGemScore,
                                             overallScore: overallScore
                                         },
                                         reasoning: generateOpportunityReasoning(prediction)
@@ -3189,27 +3235,45 @@
 
                 console.log('Final top opportunities:', topOpportunities);
 
-                // If still no opportunities, show some fallback recommendations
+                // If still no opportunities, show hidden gem fallback recommendations
                 if (topOpportunities.length === 0) {
-                    console.log('No opportunities found, showing fallback recommendations...');
+                    console.log('No opportunities found, showing hidden gem fallback recommendations...');
                     const fallbackOpportunities = [
                         {
-                            symbol: 'NVDA',
-                            data: { name: 'NVIDIA Corporation', price: 875.50, sector: 'Technology' },
-                            analysis: { upside: 12.5, confidence: 78, prediction: 'BUY', timeframe: '2-3 months' },
-                            reasoning: 'AI revolution leader with strong fundamentals'
+                            symbol: 'PLTR',
+                            data: { name: 'Palantir Technologies', price: 28.50, sector: 'Technology' },
+                            analysis: { upside: 18.5, confidence: 68, prediction: 'SPECULATIVE BUY', timeframe: '3-6 months' },
+                            reasoning: 'AI data analytics pioneer with government contracts'
                         },
                         {
-                            symbol: 'MSFT',
-                            data: { name: 'Microsoft Corporation', price: 415.25, sector: 'Technology' },
-                            analysis: { upside: 8.2, confidence: 82, prediction: 'BUY', timeframe: '3-6 months' },
-                            reasoning: 'Cloud computing dominance and AI integration'
+                            symbol: 'SOFI',
+                            data: { name: 'SoFi Technologies', price: 12.25, sector: 'Financial Services' },
+                            analysis: { upside: 22.3, confidence: 65, prediction: 'BUY', timeframe: '6-12 months' },
+                            reasoning: 'Digital banking disruptor with strong user growth'
                         },
                         {
-                            symbol: 'GOOGL',
-                            data: { name: 'Alphabet Inc.', price: 165.80, sector: 'Technology' },
-                            analysis: { upside: 10.1, confidence: 75, prediction: 'STRONG BUY', timeframe: '2-3 months' },
-                            reasoning: 'Search monopoly with AI advancement potential'
+                            symbol: 'ENPH',
+                            data: { name: 'Enphase Energy', price: 145.80, sector: 'Clean Energy' },
+                            analysis: { upside: 15.7, confidence: 72, prediction: 'BUY', timeframe: '3-9 months' },
+                            reasoning: 'Solar microinverter leader in growing renewable market'
+                        },
+                        {
+                            symbol: 'RBLX',
+                            data: { name: 'Roblox Corporation', price: 42.15, sector: 'Gaming' },
+                            analysis: { upside: 25.1, confidence: 63, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
+                            reasoning: 'Metaverse gaming platform with young demographic appeal'
+                        },
+                        {
+                            symbol: 'CRWD',
+                            data: { name: 'CrowdStrike Holdings', price: 285.40, sector: 'Cybersecurity' },
+                            analysis: { upside: 16.8, confidence: 74, prediction: 'BUY', timeframe: '3-6 months' },
+                            reasoning: 'Cybersecurity leader in growing threat landscape'
+                        },
+                        {
+                            symbol: 'ETSY',
+                            data: { name: 'Etsy Inc.', price: 78.90, sector: 'E-commerce' },
+                            analysis: { upside: 19.2, confidence: 69, prediction: 'BUY', timeframe: '6-9 months' },
+                            reasoning: 'Unique marketplace for handmade and vintage items'
                         }
                     ];
                     displayFeaturedOpportunities(fallbackOpportunities);
@@ -3218,13 +3282,19 @@
                 }
             } catch (error) {
                 console.error('Error generating featured opportunities:', error);
-                // Show fallback even on error
+                // Show hidden gem fallback even on error
                 const fallbackOpportunities = [
                     {
-                        symbol: 'AAPL',
-                        data: { name: 'Apple Inc.', price: 195.50, sector: 'Technology' },
-                        analysis: { upside: 7.5, confidence: 80, prediction: 'BUY', timeframe: '3-6 months' },
-                        reasoning: 'Strong brand loyalty and ecosystem growth'
+                        symbol: 'PLTR',
+                        data: { name: 'Palantir Technologies', price: 28.50, sector: 'Technology' },
+                        analysis: { upside: 18.5, confidence: 68, prediction: 'SPECULATIVE BUY', timeframe: '3-6 months' },
+                        reasoning: 'AI data analytics pioneer with government contracts'
+                    },
+                    {
+                        symbol: 'SOFI',
+                        data: { name: 'SoFi Technologies', price: 12.25, sector: 'Financial Services' },
+                        analysis: { upside: 22.3, confidence: 65, prediction: 'BUY', timeframe: '6-12 months' },
+                        reasoning: 'Digital banking disruptor with strong user growth'
                     }
                 ];
                 displayFeaturedOpportunities(fallbackOpportunities);
@@ -3299,32 +3369,81 @@
             return Math.max(0, Math.min(100, score));
         }
 
+        function calculateHiddenGemScore(prediction) {
+            let score = 0;
+
+            // Favor smaller market caps (hidden gems are typically not mega caps)
+            if (prediction.market_cap < 2000000000) score += 40; // Small cap bonus
+            else if (prediction.market_cap < 10000000000) score += 30; // Mid cap bonus
+            else if (prediction.market_cap < 50000000000) score += 15; // Large cap but not mega
+            else score -= 20; // Penalty for mega caps (not hidden gems)
+
+            // Favor lesser-known sectors and emerging industries
+            const hiddenGemSectors = ['Clean Energy', 'Cybersecurity', 'Fintech', 'Gaming', 'E-commerce', 'Biotech'];
+            if (hiddenGemSectors.includes(prediction.sector)) score += 25;
+
+            // Reward speculative opportunities (hidden gems often have higher risk/reward)
+            if (prediction.prediction.includes('SPECULATIVE')) score += 30;
+            else if (prediction.prediction.includes('BUY')) score += 15;
+
+            // Favor moderate confidence (too high confidence suggests well-known opportunity)
+            if (prediction.confidence >= 55 && prediction.confidence <= 75) score += 20; // Sweet spot for hidden gems
+            else if (prediction.confidence > 75) score -= 10; // Too obvious if confidence is very high
+
+            // Reward higher growth potential (hidden gems should have significant upside)
+            if (prediction.expected_change_percent > 20) score += 25;
+            else if (prediction.expected_change_percent > 15) score += 20;
+            else if (prediction.expected_change_percent > 10) score += 15;
+            else if (prediction.expected_change_percent < 5) score -= 15; // Low upside not exciting for hidden gems
+
+            // Favor longer timeframes (hidden gems take time to be recognized)
+            if (prediction.timeframe === '6-12 months') score += 20;
+            else if (prediction.timeframe === '3-6 months') score += 15;
+            else if (prediction.timeframe === '2-3 months') score += 5;
+
+            return Math.max(0, Math.min(100, score));
+        }
+
         function generateOpportunityReasoning(prediction) {
             const reasons = [];
 
-            if (prediction.confidence > 80) {
-                reasons.push("High AI confidence");
+            // Focus on hidden gem characteristics
+            if (prediction.market_cap < 2000000000) {
+                reasons.push("Small-cap growth opportunity");
+            } else if (prediction.market_cap < 10000000000) {
+                reasons.push("Mid-cap value play");
+            } else if (prediction.confidence < 75) {
+                reasons.push("Undervalued by market");
             }
 
-            if (prediction.market_cap > 50000000000) {
-                reasons.push("Large cap stability");
+            if (prediction.expected_change_percent > 20) {
+                reasons.push("High growth potential");
+            } else if (prediction.expected_change_percent > 15) {
+                reasons.push("Strong upside potential");
+            } else if (prediction.expected_change_percent > 10) {
+                reasons.push("Solid growth prospects");
             }
 
-            if (prediction.expected_change_percent > 10) {
-                reasons.push("Strong growth potential");
-            }
-
+            // Sector-specific hidden gem reasoning
             if (prediction.sector === 'Technology') {
-                reasons.push("Tech sector leadership");
-            } else if (prediction.sector === 'Healthcare') {
-                reasons.push("Defensive healthcare play");
+                reasons.push("Emerging tech innovator");
+            } else if (prediction.sector === 'Healthcare' || prediction.sector === 'Biotech') {
+                reasons.push("Healthcare innovation play");
+            } else if (prediction.sector === 'Clean Energy') {
+                reasons.push("Clean energy transition beneficiary");
+            } else if (prediction.sector === 'Fintech' || prediction.sector === 'Financial Services') {
+                reasons.push("Digital finance disruptor");
+            } else if (prediction.sector === 'Gaming' || prediction.sector === 'E-commerce') {
+                reasons.push("Digital economy growth story");
             }
 
-            if (prediction.prediction.includes('BUY')) {
-                reasons.push("AI buy signal");
+            if (prediction.prediction.includes('SPECULATIVE')) {
+                reasons.push("High-risk, high-reward opportunity");
+            } else if (prediction.prediction.includes('BUY')) {
+                reasons.push("AI-identified value opportunity");
             }
 
-            return reasons.length > 0 ? reasons.join(" • ") : "AI-identified opportunity";
+            return reasons.length > 0 ? reasons.slice(0, 2).join(" • ") : "Hidden gem opportunity";
         }
 
         function generateSimpleReasoning(symbol, data) {
