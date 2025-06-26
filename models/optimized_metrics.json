@@ -1,0 +1,60 @@
+{
+  "test_accuracy": 0.975,
+  "cv_mean_accuracy": 0.9368951612903226,
+  "cv_std_accuracy": 0.044058762553575444,
+  "num_features": 92,
+  "num_classes": 3,
+  "training_samples": 158,
+  "test_samples": 40,
+  "model_type": "Optimized Ensemble (2x MLP + RF + GB)",
+  "classification_report": {
+    "Class_0": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 13.0
+    },
+    "Class_1": {
+      "precision": 1.0,
+      "recall": 0.9230769230769231,
+      "f1-score": 0.96,
+      "support": 13.0
+    },
+    "Class_2": {
+      "precision": 0.9333333333333333,
+      "recall": 1.0,
+      "f1-score": 0.9655172413793104,
+      "support": 14.0
+    },
+    "accuracy": 0.975,
+    "macro avg": {
+      "precision": 0.9777777777777779,
+      "recall": 0.9743589743589745,
+      "f1-score": 0.9751724137931035,
+      "support": 40.0
+    },
+    "weighted avg": {
+      "precision": 0.9766666666666666,
+      "recall": 0.975,
+      "f1-score": 0.9749310344827586,
+      "support": 40.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      13,
+      0,
+      0
+    ],
+    [
+      0,
+      12,
+      1
+    ],
+    [
+      0,
+      0,
+      14
+    ]
+  ]
+}

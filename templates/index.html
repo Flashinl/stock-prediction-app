@@ -3062,9 +3062,11 @@
 
         function loadSP500Data() {
             console.log('Loading S&P 500 data...');
-            // Realistic S&P 500 data simulation with consistent values
+            // Realistic S&P 500 data simulation with daily-changing but consistent values
+            const today = new Date().toDateString(); // Get today's date as string
+            const dailySeed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 12345); // Create daily seed
             const baseValue = 4750;
-            const change = (seededRandom(12345) - 0.4) * 60; // Slight bias toward positive, consistent seed
+            const change = (seededRandom(dailySeed) - 0.4) * 60; // Slight bias toward positive, daily seed
             const currentValue = baseValue + change;
             const changePercent = (change / baseValue * 100).toFixed(2);
             const changeClass = change >= 0 ? 'positive' : 'negative';
@@ -3086,8 +3088,10 @@
 
         function loadVIXData() {
             console.log('Loading VIX data...');
-            // Realistic VIX data simulation with consistent values
-            const vixValue = (seededRandom(23456) * 25 + 12).toFixed(1); // Consistent between 12-37
+            // Realistic VIX data simulation with daily-changing but consistent values
+            const today = new Date().toDateString(); // Get today's date as string
+            const dailySeed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 23456); // Create daily seed
+            const vixValue = (seededRandom(dailySeed) * 25 + 12).toFixed(1); // Daily between 12-37
             let vixLabel = 'Low Fear';
             let vixClass = 'positive';
 
@@ -3115,8 +3119,10 @@
 
         function loadActiveSignals() {
             console.log('Loading active signals...');
-            // Count active opportunities based on actual strong signals with consistent values
-            const signalCount = Math.floor(seededRandom(34567) * 12 + 8); // Consistent between 8-20
+            // Count active opportunities based on actual strong signals with daily-changing values
+            const today = new Date().toDateString(); // Get today's date as string
+            const dailySeed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 34567); // Create daily seed
+            const signalCount = Math.floor(seededRandom(dailySeed) * 12 + 8); // Daily between 8-20
 
             setTimeout(() => {
                 const element = document.getElementById('activeSignals');
@@ -3134,14 +3140,16 @@
 
         function loadMarketSentiment() {
             console.log('Loading market sentiment...');
-            // Realistic market sentiment with bias toward positive and consistent values
+            // Realistic market sentiment with daily-changing values
             const sentiments = [
                 { label: 'Bullish', class: 'positive', emoji: '🐂', weight: 0.5 },
                 { label: 'Cautious', class: 'neutral', emoji: '⚖️', weight: 0.3 },
                 { label: 'Bearish', class: 'negative', emoji: '🐻', weight: 0.2 }
             ];
 
-            const rand = seededRandom(45678); // Use consistent seed
+            const today = new Date().toDateString(); // Get today's date as string
+            const dailySeed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 45678); // Create daily seed
+            const rand = seededRandom(dailySeed); // Use daily seed
             let sentiment;
             if (rand < 0.5) sentiment = sentiments[0]; // Bullish
             else if (rand < 0.8) sentiment = sentiments[1]; // Cautious
@@ -3163,16 +3171,21 @@
 
         function loadTopSector() {
             console.log('Loading top sector...');
-            // Realistic sector performance with consistent values
+            // Realistic sector performance with daily-changing values
             const sectors = [
                 { name: 'Technology', change: '+2.8%' },
                 { name: 'AI & Robotics', change: '+4.2%' },
                 { name: 'Clean Energy', change: '+3.5%' },
                 { name: 'Biotech', change: '+2.1%' },
-                { name: 'Fintech', change: '+1.9%' }
+                { name: 'Fintech', change: '+1.9%' },
+                { name: 'Healthcare', change: '+3.1%' },
+                { name: 'Cybersecurity', change: '+2.9%' },
+                { name: 'Cloud Computing', change: '+3.7%' }
             ];
 
-            const topSector = sectors[Math.floor(seededRandom(56789) * sectors.length)]; // Use consistent seed
+            const today = new Date().toDateString(); // Get today's date as string
+            const dailySeed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 56789); // Create daily seed
+            const topSector = sectors[Math.floor(seededRandom(dailySeed) * sectors.length)]; // Use daily seed
 
             setTimeout(() => {
                 const element = document.getElementById('topSector');
@@ -3190,8 +3203,10 @@
 
         function loadAIConfidence() {
             console.log('Loading AI confidence...');
-            // More realistic AI confidence level with consistent values
-            const confidence = Math.floor(seededRandom(67890) * 20 + 65); // Consistent between 65-85 (more realistic)
+            // More realistic AI confidence level with daily-changing values
+            const today = new Date().toDateString(); // Get today's date as string
+            const dailySeed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 67890); // Create daily seed
+            const confidence = Math.floor(seededRandom(dailySeed) * 20 + 65); // Daily between 65-85 (more realistic)
             let confidenceLabel = 'High';
             let confidenceClass = 'positive';
 

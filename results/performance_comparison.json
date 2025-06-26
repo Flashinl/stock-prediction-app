@@ -1,0 +1,100 @@
+{
+  "neural_network": {
+    "model_name": "Neural Network",
+    "accuracy": 0.9714285714285714,
+    "macro_avg_precision": 0.9777777777777779,
+    "macro_avg_recall": 0.9824561403508771,
+    "macro_avg_f1": 0.9794967381174278,
+    "weighted_avg_precision": 0.9733333333333333,
+    "weighted_avg_recall": 0.9714285714285714,
+    "weighted_avg_f1": 0.9715350818799096,
+    "class_metrics": {
+      "SELL": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "support": 2.0
+      },
+      "HOLD": {
+        "precision": 1.0,
+        "recall": 0.9473684210526315,
+        "f1_score": 0.972972972972973,
+        "support": 19.0
+      },
+      "BUY": {
+        "precision": 0.9333333333333333,
+        "recall": 1.0,
+        "f1_score": 0.9655172413793104,
+        "support": 14.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        18,
+        1
+      ],
+      [
+        0,
+        0,
+        14
+      ]
+    ],
+    "total_predictions": 35
+  },
+  "original_algorithm": {
+    "model_name": "Original Algorithm",
+    "accuracy": 0.2571428571428571,
+    "macro_avg_precision": 0.2705882352941177,
+    "macro_avg_recall": 0.11729323308270675,
+    "macro_avg_f1": 0.13196480938416422,
+    "weighted_avg_precision": 0.6840336134453782,
+    "weighted_avg_recall": 0.2571428571428571,
+    "weighted_avg_f1": 0.3028906577293674,
+    "class_metrics": {
+      "SELL": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "support": 2.0
+      },
+      "HOLD": {
+        "precision": 1.0,
+        "recall": 0.15789473684210525,
+        "f1_score": 0.2727272727272727,
+        "support": 19.0
+      },
+      "BUY": {
+        "precision": 0.35294117647058826,
+        "recall": 0.42857142857142855,
+        "f1_score": 0.3870967741935484,
+        "support": 14.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        3,
+        10
+      ],
+      [
+        2,
+        0,
+        6
+      ]
+    ],
+    "total_predictions": 35
+  },
+  "comparison_date": "2025-06-26T13:37:52.968536",
+  "test_samples": 35
+}
