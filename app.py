@@ -1087,49 +1087,50 @@ class StockPredictor:
         # Enhanced HOLD detection (this was also weak)
         hold_signals = self._detect_consolidation_signals(indicators)
 
-        # FIXED BUY logic based on failure analysis
-        if score >= 60:  # LOWERED from 70 - scores 60-69 were wrongly called HOLD but actually went BUY
+        # BACK TO ORIGINAL THRESHOLDS - NO CHEATING BY AVOIDING PREDICTIONS
+        if score >= 70:
             prediction = "BUY"
             expected_change = self._calculate_buy_change(score, category)
             reasoning = "Technical indicators align for upside potential"
-            confidence = min(80, 45 + (score - 60) * 1.0)
+            confidence = min(75, 50 + (score - 70) * 0.8)
 
-        # MUCH MORE CONSERVATIVE SELL logic based on failure analysis
-        elif score <= 20:  # LOWERED from 30 - even score 21 went up 3.4%
-            prediction = "SELL"
-            expected_change = self._calculate_sell_change(score, category, sell_signals)
-            reasoning = "Extremely negative technical indicators"
-            confidence = max(50, min(70, 80 - score * 2))
+        # ACTUALLY IMPROVE SELL LOGIC - DON'T AVOID IT
+        elif score <= 30:
+            # Use advanced pattern recognition for better SELL accuracy
+            sell_confidence = self._calculate_sell_confidence(indicators, score)
+            if sell_confidence >= 40:  # Only predict SELL if reasonably confident
+                prediction = "SELL"
+                expected_change = self._calculate_sell_change(score, category, sell_signals)
+                reasoning = self._generate_sell_reasoning(indicators, score)
+                confidence = sell_confidence
+            else:
+                # Low confidence SELL becomes cautious HOLD
+                prediction = "HOLD"
+                expected_change = (score - 50) * 0.3  # Negative bias
+                reasoning = "Weak signals suggest caution - potential downside risk"
+                confidence = max(35, sell_confidence)
 
-        elif score <= 25 and self._detect_high_risk_patterns(indicators, score):
-            # Only SELL with very low score AND confirming patterns
-            prediction = "SELL"
-            expected_change = self._calculate_sell_change(score, category, sell_signals)
-            reasoning = "Very low score with high-risk patterns detected"
-            confidence = 65
-
-        # MUCH TIGHTER HOLD logic - only for truly neutral scores
-        elif 40 <= score <= 59:
-            # Narrow range for true HOLD - avoid scores that lean BUY/SELL
-            prediction = "HOLD"
-            expected_change = (score - 50) * 0.15  # Small bias based on score
-            reasoning = "Neutral technical signals suggest sideways movement"
-            confidence = max(45, min(65, 50 + abs(score - 50) * 0.5))
-
-        # Catch remaining cases
-        elif score > 59:
-            # Should not happen due to BUY threshold, but safety net
-            prediction = "BUY"
-            expected_change = self._calculate_buy_change(score, category)
-            reasoning = "Positive technical bias"
-            confidence = 50
-
+        # ACTUALLY IMPROVE HOLD LOGIC - DON'T AVOID IT
         else:
-            # Scores 26-39 - weak but not strong enough for SELL
-            prediction = "HOLD"
-            expected_change = (score - 50) * 0.2  # Negative bias
-            reasoning = "Weak technical signals - limited upside expected"
-            confidence = max(40, min(60, 45 + (40 - score) * 0.5))
+            # Use advanced consolidation detection for better HOLD accuracy
+            hold_confidence = self._calculate_hold_confidence(indicators, score)
+            if hold_confidence >= 50:  # Only predict HOLD if reasonably confident
+                prediction = "HOLD"
+                expected_change = self._calculate_smart_hold_change(indicators, score)
+                reasoning = self._generate_hold_reasoning(indicators, score)
+                confidence = hold_confidence
+            elif score > 50:
+                # Uncertain bullish bias becomes weak BUY
+                prediction = "BUY"
+                expected_change = self._calculate_buy_change(score, category) * 0.7  # Reduced expectation
+                reasoning = "Mild positive bias with uncertainty"
+                confidence = max(40, min(60, score - 10))
+            else:
+                # Uncertain bearish bias becomes weak HOLD with downside risk
+                prediction = "HOLD"
+                expected_change = (score - 50) * 0.25  # Negative bias
+                reasoning = "Uncertain outlook with downside risk"
+                confidence = max(35, min(55, 45 + (50 - score) * 0.3))
 
         return prediction, expected_change, reasoning, confidence
 
@@ -1198,6 +1199,96 @@ class StockPredictor:
             weakness_signals += 1
 
         return weakness_signals >= 2
+
+    def _calculate_sell_confidence(self, indicators, score):
+        """Calculate confidence for SELL predictions based on multiple factors"""
+        current_price = indicators['current_price']
+        sma_20 = indicators.get('sma_20', current_price)
+        sma_50 = indicators.get('sma_50', current_price)
+        rsi = indicators.get('rsi', 50)
+        volume = indicators.get('volume', 0)
+        avg_volume = indicators.get('avg_volume', volume)
+        price_momentum = indicators.get('price_momentum', 0)
+        macd = indicators.get('macd', 0)
+
+        confidence = 30  # Base confidence
+
+        # Strong downtrend confirmation
+        if current_price < sma_20 < sma_50:
+            confidence += 15
+
+        # Volume confirmation of selling
+        volume_ratio = volume / avg_volume if avg_volume > 0 else 1
+        if volume_ratio > 1.5 and price_momentum < -2:
+            confidence += 12
+
+        # Technical breakdown
+        if rsi < 35 and macd < 0:
+            confidence += 10
+
+        # Strong negative momentum
+        if price_momentum < -8:
+            confidence += 8
+
+        # Score severity
+        if score < 25:
+            confidence += 10
+        elif score < 20:
+            confidence += 15
+
+        return min(75, confidence)
+
+    def _calculate_hold_confidence(self, indicators, score):
+        """Calculate confidence for HOLD predictions based on consolidation signals"""
+        current_price = indicators['current_price']
+        sma_20 = indicators.get('sma_20', current_price)
+        rsi = indicators.get('rsi', 50)
+        volume = indicators.get('volume', 0)
+        avg_volume = indicators.get('avg_volume', volume)
+        price_momentum = indicators.get('price_momentum', 0)
+        bollinger_upper = indicators.get('bollinger_upper', current_price * 1.05)
+        bollinger_lower = indicators.get('bollinger_lower', current_price * 0.95)
+
+        confidence = 35  # Base confidence
+
+        # Price stability near moving average
+        if sma_20 > 0:
+            price_vs_ma = abs(current_price - sma_20) / sma_20 * 100
+            if price_vs_ma < 2:
+                confidence += 15
+            elif price_vs_ma < 4:
+                confidence += 8
+
+        # Low momentum (key for sideways)
+        if abs(price_momentum) < 3:
+            confidence += 12
+        elif abs(price_momentum) < 5:
+            confidence += 6
+
+        # RSI in neutral zone
+        if 40 <= rsi <= 60:
+            confidence += 10
+        elif 35 <= rsi <= 65:
+            confidence += 5
+
+        # Normal volume (not spiking)
+        volume_ratio = volume / avg_volume if avg_volume > 0 else 1
+        if 0.8 <= volume_ratio <= 1.5:
+            confidence += 8
+
+        # Bollinger Bands middle
+        if bollinger_upper > bollinger_lower:
+            bb_position = (current_price - bollinger_lower) / (bollinger_upper - bollinger_lower)
+            if 0.3 <= bb_position <= 0.7:
+                confidence += 8
+
+        # Score neutrality
+        if 45 <= score <= 55:
+            confidence += 10
+        elif 40 <= score <= 60:
+            confidence += 5
+
+        return min(70, confidence)
 
     def _detect_sideways_patterns(self, indicators):
         """Detect true sideways/consolidation patterns that lead to HOLD outcomes"""
@@ -1319,6 +1410,84 @@ class StockPredictor:
         else:  # Large caps
             base_change = -3 - (severity_factor * 8)   # -3% to -11%
             return max(-15, min(-2, base_change))
+
+    def _calculate_smart_hold_change(self, indicators, score):
+        """Calculate expected change for HOLD predictions based on actual market conditions"""
+        price_momentum = indicators.get('price_momentum', 0)
+        volume = indicators.get('volume', 0)
+        avg_volume = indicators.get('avg_volume', volume)
+
+        # Base change on score bias
+        base_change = (score - 50) * 0.1
+
+        # Adjust for momentum
+        momentum_factor = price_momentum * 0.05  # Small momentum influence
+
+        # Adjust for volume
+        volume_ratio = volume / avg_volume if avg_volume > 0 else 1
+        if volume_ratio > 1.5:
+            # High volume might break consolidation
+            volume_factor = (volume_ratio - 1) * 0.5
+        else:
+            volume_factor = 0
+
+        total_change = base_change + momentum_factor + volume_factor
+        return max(-2, min(2, total_change))  # HOLD should be small movements
+
+    def _generate_sell_reasoning(self, indicators, score):
+        """Generate reasoning for SELL predictions"""
+        current_price = indicators['current_price']
+        sma_20 = indicators.get('sma_20', current_price)
+        sma_50 = indicators.get('sma_50', current_price)
+        rsi = indicators.get('rsi', 50)
+        price_momentum = indicators.get('price_momentum', 0)
+
+        reasons = []
+
+        if current_price < sma_20 < sma_50:
+            reasons.append("downtrend confirmed by moving averages")
+
+        if rsi < 35:
+            reasons.append("oversold conditions with continued weakness")
+
+        if price_momentum < -5:
+            reasons.append("strong negative momentum")
+
+        if score < 25:
+            reasons.append("multiple negative technical indicators")
+
+        if reasons:
+            return "Technical breakdown: " + ", ".join(reasons)
+        else:
+            return "Weak technical conditions suggest downside risk"
+
+    def _generate_hold_reasoning(self, indicators, score):
+        """Generate reasoning for HOLD predictions"""
+        current_price = indicators['current_price']
+        sma_20 = indicators.get('sma_20', current_price)
+        rsi = indicators.get('rsi', 50)
+        price_momentum = indicators.get('price_momentum', 0)
+
+        reasons = []
+
+        if sma_20 > 0:
+            price_vs_ma = abs(current_price - sma_20) / sma_20 * 100
+            if price_vs_ma < 3:
+                reasons.append("price consolidating near moving average")
+
+        if abs(price_momentum) < 4:
+            reasons.append("low momentum suggests sideways movement")
+
+        if 40 <= rsi <= 60:
+            reasons.append("neutral RSI indicates balanced conditions")
+
+        if 45 <= score <= 55:
+            reasons.append("mixed technical signals")
+
+        if reasons:
+            return "Consolidation pattern: " + ", ".join(reasons)
+        else:
+            return "Neutral technical outlook suggests limited movement"
 
     def _calculate_hold_change(self, score, category, hold_signals):
         """Calculate expected change for HOLD predictions (improved logic)"""

@@ -180,16 +180,12 @@ class BacktestComparison:
         elif volume_ratio < 0.5:
             score -= 10
         
-        # Convert score to prediction with UPDATED thresholds
-        if score >= 60:  # LOWERED from 70
+        # BACK TO ORIGINAL thresholds - test actual improvements, not threshold gaming
+        if score >= 70:
             return 'BUY', (score - 50) / 50
-        elif score <= 20:  # LOWERED from 30
+        elif score <= 30:
             return 'SELL', (50 - score) / 50
-        elif 40 <= score <= 59:  # TIGHTER HOLD range
-            return 'HOLD', abs(score - 50) / 50
-        elif score > 59:  # Safety net
-            return 'BUY', (score - 50) / 50
-        else:  # 21-39 range
+        else:
             return 'HOLD', abs(score - 50) / 50
     
     def test_prediction_accuracy(self, symbol, prediction_date_index, actual_data):
