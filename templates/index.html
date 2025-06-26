@@ -3086,39 +3086,43 @@
                 </div>
             `;
 
-            // Hidden Gems & Undervalued Opportunities (Focus on Small-Mid Cap Growth)
+            // High-Growth Opportunities & Emerging Leaders (Expanded for Better Growth Potential)
             const stockCandidates = [
-                // Small-Cap Tech Innovators & Cybersecurity
-                'PLTR', 'SNOW', 'CRWD', 'ZS', 'NET', 'DDOG', 'OKTA', 'ESTC', 'MDB', 'SPLK', 'S', 'PANW', 'FTNT', 'CYBR',
-                // Emerging Fintech & Digital Banking
-                'SOFI', 'AFRM', 'UPST', 'HOOD', 'SQ', 'COIN', 'LC', 'OPEN', 'RDFN', 'BILL', 'PAYO', 'FLYW', 'STNE', 'NU',
-                // Biotech & Healthcare Innovation
-                'MRNA', 'BNTX', 'NVAX', 'VRTX', 'REGN', 'ILMN', 'ISRG', 'TDOC', 'VEEV', 'DXCM', 'CRSP', 'EDIT', 'BEAM', 'NTLA',
+                // AI & Machine Learning Leaders
+                'NVDA', 'AMD', 'PLTR', 'C3AI', 'AI', 'SOUN', 'BBAI', 'UPST', 'PATH', 'SMCI', 'AVGO', 'MRVL', 'QCOM', 'INTC',
+                // Quantum Computing & Advanced Tech
+                'IBM', 'GOOGL', 'IONQ', 'RGTI', 'QUBT', 'ARQQ', 'QMCO', 'QTUM', 'MVIS', 'LAZR', 'VLDR', 'OUST', 'LIDR', 'AEYE',
+                // Space Technology & Aerospace
+                'RKLB', 'SPCE', 'ASTR', 'PL', 'IRDM', 'MAXR', 'SATS', 'LUNR', 'VORB', 'ASTS', 'GSAT', 'BA', 'LMT', 'RTX',
+                // Cybersecurity & Data Protection
+                'CRWD', 'ZS', 'NET', 'PANW', 'FTNT', 'CYBR', 'OKTA', 'S', 'TENB', 'VRNS', 'FEYE', 'CHKP', 'QLYS', 'RPD',
+                // Biotech & Gene Therapy Innovation
+                'MRNA', 'BNTX', 'CRSP', 'EDIT', 'BEAM', 'NTLA', 'BLUE', 'SGMO', 'FATE', 'VCYT', 'PACB', 'ILMN', 'NVTA', 'CDNA',
+                // Electric Vehicles & Battery Tech
+                'TSLA', 'RIVN', 'LCID', 'NIO', 'XPEV', 'LI', 'CHPT', 'BLNK', 'QS', 'SLDP', 'BYDDY', 'GOEV', 'RIDE', 'NKLA',
+                // Fintech & Digital Banking Disruptors
+                'SOFI', 'AFRM', 'HOOD', 'SQ', 'COIN', 'PYPL', 'ADYEN', 'LC', 'UPST', 'BILL', 'PAYO', 'STNE', 'NU', 'OPEN',
+                // Cloud Computing & SaaS Growth
+                'SNOW', 'DDOG', 'MDB', 'ESTC', 'SPLK', 'NOW', 'WDAY', 'TEAM', 'ATLASSIAN', 'ZM', 'DOCU', 'TWLO', 'HUBS', 'ZI',
+                // Gaming & Metaverse
+                'RBLX', 'U', 'EA', 'TTWO', 'ATVI', 'DKNG', 'PENN', 'SKLZ', 'SLGG', 'GMBL', 'FUBO', 'NFLX', 'DIS', 'META',
                 // Clean Energy & Sustainability
-                'ENPH', 'SEDG', 'PLUG', 'FCEL', 'BE', 'RIVN', 'LCID', 'CHPT', 'BLNK', 'QS', 'NOVA', 'RUN', 'SPWR', 'MAXN',
-                // E-commerce & Consumer Disruptors
-                'ETSY', 'CHWY', 'PTON', 'ROKU', 'RBLX', 'U', 'FUBO', 'SPOT', 'PINS', 'SNAP', 'TWTR', 'MTCH', 'BMBL', 'YELP',
-                // Industrial & Materials Innovation
-                'RKLB', 'SPCE', 'PLD', 'EXR', 'COLD', 'STAG', 'FR', 'AMT', 'CCI', 'SBAC', 'CARR', 'OTIS', 'XYL', 'WAT',
-                // Gaming & Digital Entertainment
-                'EA', 'TTWO', 'RBLX', 'U', 'FUBO', 'DKNG', 'PENN', 'SPOT', 'ROKU', 'NFLX', 'DIS', 'PARA', 'WBD', 'LYV',
-                // Emerging Growth Sectors & SaaS
-                'ABNB', 'UBER', 'LYFT', 'DASH', 'SHOP', 'WDAY', 'NOW', 'ZM', 'DOCU', 'TWLO', 'TEAM', 'ATLASSIAN', 'HUBS', 'ZI',
-                // Small-Cap Value & Consumer
-                'LULU', 'NKE', 'SBUX', 'CMG', 'FIVE', 'ULTA', 'TJX', 'ROST', 'COST', 'BJ', 'DLTR', 'DG', 'POOL', 'WSM',
-                // Emerging Markets & International
-                'BABA', 'JD', 'PDD', 'BIDU', 'NIO', 'XPEV', 'LI', 'GRAB', 'SE', 'MELI', 'GLOB', 'CPNG', 'BEKE', 'TME',
-                // REITs & Infrastructure
-                'EQIX', 'DLR', 'CCI', 'AMT', 'SBAC', 'PSA', 'EXR', 'AVB', 'EQR', 'MAA', 'UDR', 'CPT', 'ESS', 'AIV',
-                // Specialty Retail & Services
-                'CHWY', 'ETSY', 'W', 'FTCH', 'RH', 'CVNA', 'CARG', 'KMX', 'AN', 'LAD', 'ABG', 'GPI', 'SAH', 'PAG'
+                'ENPH', 'SEDG', 'PLUG', 'FCEL', 'BE', 'NOVA', 'RUN', 'SPWR', 'MAXN', 'CSIQ', 'JKS', 'ARRY', 'VSLR', 'SUNW',
+                // E-commerce & Digital Platforms
+                'SHOP', 'ETSY', 'CHWY', 'ROKU', 'SPOT', 'PINS', 'SNAP', 'UBER', 'LYFT', 'DASH', 'ABNB', 'BKNG', 'EXPE', 'TRIP',
+                // Healthcare Technology & Telemedicine
+                'TDOC', 'VEEV', 'DXCM', 'ISRG', 'PODD', 'TMDX', 'OMCL', 'IRTC', 'ONEM', 'AMWL', 'HIMS', 'DOCS', 'ACCD', 'WELL',
+                // Emerging Growth & Small-Cap Innovators
+                'PTON', 'LMND', 'ROOT', 'MTCH', 'BMBL', 'YELP', 'W', 'FTCH', 'RH', 'CVNA', 'CARG', 'RDFN', 'ZILLOW', 'OPENDOOR',
+                // International Growth & Emerging Markets
+                'BABA', 'JD', 'PDD', 'BIDU', 'SE', 'MELI', 'GLOB', 'CPNG', 'GRAB', 'BEKE', 'TME', 'BILI', 'VIPS', 'TCOM'
             ];
 
             const candidates = [];
 
             try {
-                // Analyze stocks sequentially to prevent server overload
-                for (let i = 0; i < Math.min(8, stockCandidates.length); i++) { // Reduced to 8 stocks
+                // Analyze more stocks for better growth opportunities
+                for (let i = 0; i < Math.min(15, stockCandidates.length); i++) { // Increased to 15 stocks for better selection
                     const symbol = stockCandidates[i];
                     try {
                         console.log(`Fetching prediction for ${symbol}...`);
@@ -3137,15 +3141,15 @@
                             const prediction = await response.json();
                             console.log(`Prediction for ${symbol}:`, prediction);
 
-                            // Include BUY/STRONG BUY recommendations with growth potential (more inclusive for hidden gems)
+                            // More aggressive filtering for high-growth opportunities
                             if (!prediction.error &&
-                                prediction.expected_change_percent >= 3 && // Lower threshold for hidden gems
-                                prediction.confidence >= 55 && // Lower confidence requirement to find undervalued stocks
+                                prediction.expected_change_percent >= 5 && // Higher threshold for meaningful growth
+                                prediction.confidence >= 50 && // Lower confidence to capture speculative opportunities
                                 (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG') || prediction.prediction.includes('SPECULATIVE'))) {
                                 const safetyScore = calculateSafetyScore(prediction);
                                 const growthScore = calculateGrowthScore(prediction);
-                                const hiddenGemScore = calculateHiddenGemScore(prediction); // New scoring for hidden gems
-                                const overallScore = (safetyScore * 0.2) + (growthScore * 0.5) + (hiddenGemScore * 0.3); // Favor growth and hidden gem potential
+                                const hiddenGemScore = calculateHiddenGemScore(prediction);
+                                const overallScore = (safetyScore * 0.1) + (growthScore * 0.7) + (hiddenGemScore * 0.2); // Heavily favor growth potential
 
                                 candidates.push({
                                     symbol: prediction.symbol,
@@ -3186,11 +3190,11 @@
 
                 console.log(`Total candidates found: ${candidates.length}`);
 
-                // If we don't have enough candidates, lower the bar slightly
-                if (candidates.length < 3) {
-                    console.log('Not enough candidates, lowering requirements...');
-                    // Try again with lower thresholds (sequential to prevent overload)
-                    for (let i = 8; i < Math.min(12, stockCandidates.length); i++) {
+                // If we don't have enough candidates, expand search for growth opportunities
+                if (candidates.length < 6) {
+                    console.log('Not enough candidates, expanding search for growth opportunities...');
+                    // Try more stocks with growth-focused criteria
+                    for (let i = 15; i < Math.min(25, stockCandidates.length); i++) {
                         const symbol = stockCandidates[i];
                         try {
                             const response = await fetch('/api/predict', {
@@ -3202,14 +3206,14 @@
                             if (response.ok) {
                                 const prediction = await response.json();
                                 if (!prediction.error &&
-                                    prediction.expected_change_percent >= 2 && // Even lower threshold for backup
-                                    prediction.confidence >= 50 && // Lower confidence for hidden gems
-                                    (prediction.prediction.includes('BUY') || prediction.prediction.includes('HOLD') || prediction.prediction.includes('SPECULATIVE'))) {
+                                    prediction.expected_change_percent >= 4 && // Maintain meaningful growth threshold
+                                    prediction.confidence >= 45 && // Lower confidence for speculative opportunities
+                                    (prediction.prediction.includes('BUY') || prediction.prediction.includes('SPECULATIVE'))) { // Focus on BUY/SPECULATIVE only
 
                                     const safetyScore = calculateSafetyScore(prediction);
                                     const growthScore = calculateGrowthScore(prediction);
                                     const hiddenGemScore = calculateHiddenGemScore(prediction);
-                                    const overallScore = (safetyScore * 0.2) + (growthScore * 0.5) + (hiddenGemScore * 0.3);
+                                    const overallScore = (safetyScore * 0.1) + (growthScore * 0.7) + (hiddenGemScore * 0.2); // Growth-focused weighting
 
                                     candidates.push({
                                         symbol: prediction.symbol,
@@ -3238,8 +3242,8 @@
                         }
 
                         // Add delay between backup requests
-                        if (i < Math.min(11, stockCandidates.length - 1)) {
-                            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+                        if (i < Math.min(24, stockCandidates.length - 1)) {
+                            await new Promise(resolve => setTimeout(resolve, 150)); // Faster delay for more stocks
                         }
                     }
                 }
@@ -3273,22 +3277,28 @@
                             reasoning: 'Solar microinverter leader in growing renewable market'
                         },
                         {
-                            symbol: 'RBLX',
-                            data: { name: 'Roblox Corporation', price: 42.15, sector: 'Gaming' },
-                            analysis: { upside: 25.1, confidence: 63, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
-                            reasoning: 'Metaverse gaming platform with young demographic appeal'
+                            symbol: 'NVDA',
+                            data: { name: 'NVIDIA Corporation', price: 875.50, sector: 'Technology' },
+                            analysis: { upside: 28.8, confidence: 78, prediction: 'STRONG BUY', timeframe: '6-12 months' },
+                            reasoning: 'AI chip leader driving the artificial intelligence revolution'
                         },
                         {
-                            symbol: 'CRWD',
-                            data: { name: 'CrowdStrike Holdings', price: 285.40, sector: 'Cybersecurity' },
-                            analysis: { upside: 16.8, confidence: 74, prediction: 'BUY', timeframe: '3-6 months' },
-                            reasoning: 'Cybersecurity leader in growing threat landscape'
+                            symbol: 'RKLB',
+                            data: { name: 'Rocket Lab USA', price: 8.90, sector: 'Space Technology' },
+                            analysis: { upside: 42.4, confidence: 63, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
+                            reasoning: 'Small satellite launch leader in rapidly growing space economy'
                         },
                         {
-                            symbol: 'ETSY',
-                            data: { name: 'Etsy Inc.', price: 78.90, sector: 'E-commerce' },
-                            analysis: { upside: 19.2, confidence: 69, prediction: 'BUY', timeframe: '6-9 months' },
-                            reasoning: 'Unique marketplace for handmade and vintage items'
+                            symbol: 'IONQ',
+                            data: { name: 'IonQ Inc.', price: 12.40, sector: 'Quantum Computing' },
+                            analysis: { upside: 35.7, confidence: 58, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
+                            reasoning: 'Quantum computing pioneer with breakthrough technology'
+                        },
+                        {
+                            symbol: 'CRSP',
+                            data: { name: 'CRISPR Therapeutics', price: 68.90, sector: 'Biotech' },
+                            analysis: { upside: 32.2, confidence: 62, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
+                            reasoning: 'Gene editing technology leader with breakthrough therapies'
                         }
                     ];
                     displayFeaturedOpportunities(fallbackOpportunities);
@@ -3297,19 +3307,25 @@
                 }
             } catch (error) {
                 console.error('Error generating featured opportunities:', error);
-                // Show hidden gem fallback even on error
+                // Show high-growth fallback even on error
                 const fallbackOpportunities = [
+                    {
+                        symbol: 'NVDA',
+                        data: { name: 'NVIDIA Corporation', price: 875.50, sector: 'Technology' },
+                        analysis: { upside: 28.8, confidence: 78, prediction: 'STRONG BUY', timeframe: '6-12 months' },
+                        reasoning: 'AI chip leader driving the artificial intelligence revolution'
+                    },
                     {
                         symbol: 'PLTR',
                         data: { name: 'Palantir Technologies', price: 28.50, sector: 'Technology' },
-                        analysis: { upside: 18.5, confidence: 68, prediction: 'SPECULATIVE BUY', timeframe: '3-6 months' },
-                        reasoning: 'AI data analytics pioneer with government contracts'
+                        analysis: { upside: 32.5, confidence: 68, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
+                        reasoning: 'AI data analytics pioneer expanding into commercial markets'
                     },
                     {
-                        symbol: 'SOFI',
-                        data: { name: 'SoFi Technologies', price: 12.25, sector: 'Financial Services' },
-                        analysis: { upside: 22.3, confidence: 65, prediction: 'BUY', timeframe: '6-12 months' },
-                        reasoning: 'Digital banking disruptor with strong user growth'
+                        symbol: 'RKLB',
+                        data: { name: 'Rocket Lab USA', price: 8.90, sector: 'Space Technology' },
+                        analysis: { upside: 42.4, confidence: 63, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
+                        reasoning: 'Small satellite launch leader in rapidly growing space economy'
                     }
                 ];
                 displayFeaturedOpportunities(fallbackOpportunities);
@@ -3320,26 +3336,36 @@
             let score = 0;
 
             // Confidence level (moderate weight for confidence)
-            score += prediction.confidence * 0.4; // Max 40 points
+            score += prediction.confidence * 0.3; // Reduced weight to allow more speculative opportunities
 
-            // Market cap safety (adjusted to be less restrictive)
-            if (prediction.market_cap > 100000000000) score += 20; // >$100B (large cap)
-            else if (prediction.market_cap > 10000000000) score += 18; // >$10B (mid cap)
-            else if (prediction.market_cap > 2000000000) score += 15; // >$2B (small cap)
-            else if (prediction.market_cap > 500000000) score += 10; // >$500M (micro cap)
-            else score -= 5; // Small penalty for very small caps
+            // Market cap safety (less restrictive for growth opportunities)
+            if (prediction.market_cap > 100000000000) score += 15; // >$100B (large cap) - reduced bonus
+            else if (prediction.market_cap > 10000000000) score += 12; // >$10B (mid cap)
+            else if (prediction.market_cap > 2000000000) score += 10; // >$2B (small cap)
+            else if (prediction.market_cap > 500000000) score += 8; // >$500M (micro cap)
+            else if (prediction.market_cap > 100000000) score += 5; // >$100M (small micro cap)
+            else score += 0; // No penalty for very small caps in growth context
 
-            // Sector safety (more inclusive)
-            const safeSectors = ['Technology', 'Healthcare', 'Consumer Staples', 'Utilities', 'Financials', 'Communication Services'];
-            if (safeSectors.includes(prediction.sector)) score += 15;
+            // Sector safety (more inclusive of growth sectors)
+            const safeSectors = ['Technology', 'Healthcare', 'Consumer Staples', 'Utilities', 'Financials', 'Communication Services', 'Clean Energy'];
+            if (safeSectors.includes(prediction.sector)) score += 12; // Reduced bonus
 
-            // Growth sectors get additional safety points if they're established
-            const establishedGrowthSectors = ['Technology', 'Healthcare'];
-            if (establishedGrowthSectors.includes(prediction.sector) && prediction.market_cap > 5000000000) score += 10;
+            // Growth sectors get safety points regardless of size (encouraging innovation)
+            const growthSectors = ['Technology', 'Healthcare', 'Cybersecurity', 'Biotech', 'Clean Energy', 'Fintech'];
+            if (growthSectors.includes(prediction.sector)) score += 8;
 
-            // Avoid penny stocks but less harsh penalty
-            if (!prediction.is_penny_stock) score += 15;
-            else score -= 20;
+            // Innovation sectors get safety bonus (these are the future)
+            const innovationSectors = ['Artificial Intelligence', 'Quantum Computing', 'Space Technology', 'Gene Therapy'];
+            if (innovationSectors.some(sector => prediction.sector?.includes(sector) || prediction.company_name?.includes(sector))) score += 10;
+
+            // Less harsh penalty for penny stocks in growth context
+            if (!prediction.is_penny_stock) score += 10; // Reduced bonus
+            else score -= 5; // Much smaller penalty
+
+            // Prediction strength adds to safety (strong predictions are safer bets)
+            if (prediction.prediction.includes('STRONG BUY')) score += 8;
+            else if (prediction.prediction.includes('BUY')) score += 5;
+            else if (prediction.prediction.includes('SPECULATIVE')) score += 3; // Even speculative gets some safety points
 
             return Math.max(Math.min(score, 100), 0);
         }
@@ -3347,76 +3373,103 @@
         function calculateGrowthScore(prediction) {
             let score = 0;
 
-            // Expected change (main factor with higher weight for significant gains)
+            // Expected change (main factor with exponential scaling for high growth)
             const changePercent = prediction.expected_change_percent;
-            if (changePercent > 30) score += 70; // Exceptional growth potential
-            else if (changePercent > 25) score += 60; // Very high growth
-            else if (changePercent > 20) score += 50; // High growth
-            else if (changePercent > 15) score += 40; // Good growth
-            else if (changePercent > 10) score += 30; // Moderate growth
+            if (changePercent > 40) score += 90; // Exceptional growth potential
+            else if (changePercent > 30) score += 80; // Very high growth
+            else if (changePercent > 25) score += 70; // High growth
+            else if (changePercent > 20) score += 60; // Good growth
+            else if (changePercent > 15) score += 50; // Moderate growth
+            else if (changePercent > 10) score += 35; // Low-moderate growth
             else if (changePercent > 5) score += 20; // Low growth
             else score += changePercent * 2; // Linear for smaller gains
 
-            // High-growth sectors get significant bonus
-            const highGrowthSectors = ['Technology', 'Healthcare', 'Communication Services', 'Consumer Discretionary'];
+            // Emerging high-growth sectors get major bonus
+            const emergingGrowthSectors = ['Technology', 'Artificial Intelligence', 'Quantum Computing', 'Space Technology', 'Cybersecurity', 'Biotech', 'Clean Energy'];
+            if (emergingGrowthSectors.some(sector => prediction.sector?.includes(sector) || prediction.company_name?.includes(sector))) score += 35;
+
+            // Traditional high-growth sectors get good bonus
+            const highGrowthSectors = ['Healthcare', 'Communication Services', 'Consumer Discretionary', 'Fintech'];
             if (highGrowthSectors.includes(prediction.sector)) score += 25;
 
-            // Innovation/disruptive sectors get extra bonus
-            const innovationSectors = ['Technology'];
-            if (innovationSectors.includes(prediction.sector)) score += 10;
+            // Innovation/disruptive company indicators (check company name for keywords)
+            const innovationKeywords = ['AI', 'Cloud', 'Data', 'Cyber', 'Gene', 'Electric', 'Solar', 'Quantum', 'Space', 'Robotics'];
+            if (innovationKeywords.some(keyword => prediction.company_name?.includes(keyword))) score += 20;
 
-            // Timeframe bonus (reward confident longer-term predictions)
-            if (prediction.timeframe === '3-6 months') score += 25; // Most confident
-            else if (prediction.timeframe === '2-3 months') score += 20;
-            else if (prediction.timeframe === '1-2 months') score += 10;
-            else score += 5;
+            // Timeframe bonus (reward confident longer-term predictions for growth)
+            if (prediction.timeframe === '6-12 months') score += 30; // Long-term growth confidence
+            else if (prediction.timeframe === '3-6 months') score += 25; // Medium-term confidence
+            else if (prediction.timeframe === '2-3 months') score += 15;
+            else if (prediction.timeframe === '1-2 months') score += 5;
 
-            // Confidence bonus (reward high-confidence predictions)
-            if (prediction.confidence > 80) score += 15;
-            else if (prediction.confidence > 70) score += 10;
-            else if (prediction.confidence > 60) score += 5;
+            // Confidence bonus (balanced approach for growth opportunities)
+            if (prediction.confidence > 75) score += 20; // High confidence in growth
+            else if (prediction.confidence > 65) score += 15;
+            else if (prediction.confidence > 55) score += 10; // Still reward moderate confidence for speculative growth
+            else if (prediction.confidence > 45) score += 5; // Minimal reward for low confidence
 
-            // Prediction strength bonus
-            if (prediction.prediction.includes('STRONG BUY')) score += 20;
-            else if (prediction.prediction.includes('BUY')) score += 15;
-            else if (prediction.prediction.includes('SPECULATIVE BUY')) score += 25; // Higher reward for speculative opportunities
+            // Prediction strength bonus (favor aggressive growth predictions)
+            if (prediction.prediction.includes('SPECULATIVE BUY')) score += 35; // Highest reward for speculative growth
+            else if (prediction.prediction.includes('STRONG BUY')) score += 30;
+            else if (prediction.prediction.includes('BUY')) score += 20;
 
-            return Math.max(0, Math.min(100, score));
+            // Market cap bonus for growth potential (smaller companies often have higher growth potential)
+            if (prediction.market_cap && prediction.market_cap < 1000000000) score += 15; // Under $1B
+            else if (prediction.market_cap && prediction.market_cap < 5000000000) score += 10; // Under $5B
+            else if (prediction.market_cap && prediction.market_cap < 20000000000) score += 5; // Under $20B
+
+            return Math.max(0, Math.min(120, score)); // Allow scores above 100 for exceptional growth opportunities
         }
 
         function calculateHiddenGemScore(prediction) {
             let score = 0;
 
-            // Favor smaller market caps (hidden gems are typically not mega caps)
-            if (prediction.market_cap < 2000000000) score += 40; // Small cap bonus
-            else if (prediction.market_cap < 10000000000) score += 30; // Mid cap bonus
-            else if (prediction.market_cap < 50000000000) score += 15; // Large cap but not mega
-            else score -= 20; // Penalty for mega caps (not hidden gems)
+            // Favor smaller market caps with exponential scaling (hidden gems are typically smaller companies)
+            if (prediction.market_cap < 500000000) score += 50; // Micro cap bonus (under $500M)
+            else if (prediction.market_cap < 2000000000) score += 45; // Small cap bonus (under $2B)
+            else if (prediction.market_cap < 10000000000) score += 35; // Mid cap bonus (under $10B)
+            else if (prediction.market_cap < 50000000000) score += 20; // Large cap but not mega (under $50B)
+            else if (prediction.market_cap < 100000000000) score += 5; // Large cap (under $100B)
+            else score -= 25; // Penalty for mega caps (not hidden gems)
 
-            // Favor lesser-known sectors and emerging industries
-            const hiddenGemSectors = ['Clean Energy', 'Cybersecurity', 'Fintech', 'Gaming', 'E-commerce', 'Biotech'];
+            // Favor emerging and disruptive sectors
+            const emergingGemSectors = ['Artificial Intelligence', 'Quantum Computing', 'Space Technology', 'Gene Therapy', 'Robotics', 'Autonomous Vehicles'];
+            if (emergingGemSectors.some(sector => prediction.sector?.includes(sector) || prediction.company_name?.includes(sector))) score += 35;
+
+            // Traditional hidden gem sectors
+            const hiddenGemSectors = ['Clean Energy', 'Cybersecurity', 'Fintech', 'Gaming', 'E-commerce', 'Biotech', 'SaaS'];
             if (hiddenGemSectors.includes(prediction.sector)) score += 25;
 
-            // Reward speculative opportunities (hidden gems often have higher risk/reward)
-            if (prediction.prediction.includes('SPECULATIVE')) score += 30;
-            else if (prediction.prediction.includes('BUY')) score += 15;
+            // Reward speculative and high-risk opportunities
+            if (prediction.prediction.includes('SPECULATIVE')) score += 40; // Higher reward for speculative
+            else if (prediction.prediction.includes('STRONG BUY')) score += 25;
+            else if (prediction.prediction.includes('BUY')) score += 20;
 
-            // Favor moderate confidence (too high confidence suggests well-known opportunity)
-            if (prediction.confidence >= 55 && prediction.confidence <= 75) score += 20; // Sweet spot for hidden gems
-            else if (prediction.confidence > 75) score -= 10; // Too obvious if confidence is very high
+            // Favor moderate to high confidence for hidden gems (balance between opportunity and risk)
+            if (prediction.confidence >= 60 && prediction.confidence <= 80) score += 25; // Sweet spot for hidden gems
+            else if (prediction.confidence >= 50 && prediction.confidence < 60) score += 20; // Good for speculative gems
+            else if (prediction.confidence > 80) score += 10; // Still good but less "hidden"
+            else if (prediction.confidence < 50) score -= 10; // Too risky even for hidden gems
 
-            // Reward higher growth potential (hidden gems should have significant upside)
-            if (prediction.expected_change_percent > 20) score += 25;
-            else if (prediction.expected_change_percent > 15) score += 20;
-            else if (prediction.expected_change_percent > 10) score += 15;
-            else if (prediction.expected_change_percent < 5) score -= 15; // Low upside not exciting for hidden gems
+            // Reward significant growth potential (hidden gems should have major upside)
+            if (prediction.expected_change_percent > 30) score += 35; // Exceptional upside
+            else if (prediction.expected_change_percent > 25) score += 30; // Very high upside
+            else if (prediction.expected_change_percent > 20) score += 25; // High upside
+            else if (prediction.expected_change_percent > 15) score += 20; // Good upside
+            else if (prediction.expected_change_percent > 10) score += 15; // Moderate upside
+            else if (prediction.expected_change_percent < 8) score -= 20; // Low upside not exciting for hidden gems
 
-            // Favor longer timeframes (hidden gems take time to be recognized)
-            if (prediction.timeframe === '6-12 months') score += 20;
-            else if (prediction.timeframe === '3-6 months') score += 15;
-            else if (prediction.timeframe === '2-3 months') score += 5;
+            // Favor longer timeframes (hidden gems take time to be recognized and develop)
+            if (prediction.timeframe === '6-12 months') score += 25; // Best for hidden gem development
+            else if (prediction.timeframe === '3-6 months') score += 20; // Good timeframe
+            else if (prediction.timeframe === '2-3 months') score += 10; // Acceptable
+            else score += 5; // Short-term less ideal for hidden gems
 
-            return Math.max(0, Math.min(100, score));
+            // Bonus for companies with innovation indicators in name
+            const innovationIndicators = ['Tech', 'AI', 'Data', 'Cloud', 'Cyber', 'Bio', 'Gene', 'Solar', 'Electric', 'Quantum', 'Space'];
+            if (innovationIndicators.some(indicator => prediction.company_name?.includes(indicator))) score += 15;
+
+            return Math.max(0, Math.min(120, score)); // Allow higher scores for exceptional hidden gems
         }
 
         function generateOpportunityReasoning(prediction) {

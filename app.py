@@ -1070,7 +1070,32 @@ class StockPredictor:
         elif volume_ratio < 0.5:
             score -= 10
 
-        return max(0, min(100, score))
+        # === GROWTH-SPECIFIC ENHANCEMENTS ===
+        # Add bonus points for growth momentum patterns
+
+        # Strong upward momentum with volume confirmation
+        if price_momentum > 3 and volume_ratio > 1.2:
+            score += 8  # Growth momentum bonus
+
+        # RSI in growth sweet spot (not overbought but showing strength)
+        if 45 <= rsi <= 65:
+            score += 5  # Healthy growth momentum
+
+        # Price above both moving averages with good separation
+        if current_price > sma_20 and sma_20 > sma_50:
+            ma_separation = (sma_20 - sma_50) / sma_50 * 100
+            if ma_separation > 2:  # Strong trend separation
+                score += 6  # Trend strength bonus
+
+        # Bollinger band breakout potential (near upper band but not extreme)
+        if 0.7 <= bb_position <= 0.9:
+            score += 4  # Breakout potential bonus
+
+        # MACD momentum acceleration
+        if macd > 0.5:  # Strong positive MACD
+            score += 5  # Strong momentum bonus
+
+        return max(0, min(110, score))  # Allow higher scores for exceptional growth opportunities
 
     def _calculate_momentum_strength(self, indicators):
         """Calculate overall momentum strength from multiple indicators"""
@@ -1189,34 +1214,41 @@ class StockPredictor:
             confidence = min(75, hold_confidence)
             return prediction, expected_change, reasoning, confidence
 
-        # === PROVEN BUY LOGIC (KEEP 84.6% ACCURACY) ===
-        # Strong BUY (Score ≥75)
-        if score >= 75:
+        # === ENHANCED BUY LOGIC FOR GROWTH OPPORTUNITIES ===
+        # Exceptional BUY (Score ≥80) - New tier for exceptional growth
+        if score >= 80:
+            prediction = "STRONG BUY"
+            expected_change = self._calculate_buy_change(score, category) * 1.4  # Increased multiplier
+            reasoning = "Exceptional technical strength with high growth potential"
+            confidence = max(85, min(95, score))
+
+        # Strong BUY (Score ≥70) - Lowered threshold
+        elif score >= 70:
             prediction = "STRONG BUY"
             expected_change = self._calculate_buy_change(score, category) * 1.2
-            reasoning = "Exceptional technical strength across all indicators"
-            confidence = max(80, min(95, score))
+            reasoning = "Strong technical indicators with growth momentum"
+            confidence = max(80, min(90, score))
 
-        # Regular BUY (Score ≥65)
-        elif score >= 65:
+        # Regular BUY (Score ≥60) - Lowered threshold for more opportunities
+        elif score >= 60:
             prediction = "BUY"
             expected_change = self._calculate_buy_change(score, category)
-            reasoning = "Strong bullish technical signals"
-            confidence = max(75, min(90, score))
+            reasoning = "Solid bullish technical signals"
+            confidence = max(75, min(85, score))
 
-        # Moderate BUY (Score ≥55 or strong momentum)
-        elif score >= 55 or (price_momentum > 3 and rsi < 70):
+        # Growth BUY (Score ≥50 with growth indicators) - More aggressive
+        elif score >= 50 or (price_momentum > 2 and rsi < 75):
             prediction = "BUY"
-            expected_change = self._calculate_buy_change(score, category) * 0.8
-            reasoning = "Positive technical momentum"
-            confidence = max(65, min(80, score + 5))
+            expected_change = self._calculate_buy_change(score, category) * 0.9  # Increased from 0.8
+            reasoning = "Positive technical momentum with growth potential"
+            confidence = max(65, min(80, score + 8))
 
-        # Opportunistic BUY (Oversold bounce)
-        elif rsi < 35 and price_momentum > -2:
-            prediction = "BUY"
-            expected_change = self._calculate_buy_change(score, category) * 0.6
-            reasoning = "Oversold bounce opportunity"
-            confidence = max(60, min(75, score + 10))
+        # Speculative BUY (Growth opportunity with moderate signals)
+        elif score >= 45 or (rsi < 40 and price_momentum > -1):
+            prediction = "SPECULATIVE BUY"
+            expected_change = self._calculate_buy_change(score, category) * 0.7  # Increased from 0.6
+            reasoning = "Speculative growth opportunity with technical support"
+            confidence = max(55, min(75, score + 12))
 
         # === FALLBACK LOGIC ===
         elif score >= 45:
@@ -1598,16 +1630,19 @@ class StockPredictor:
         }
 
     def _calculate_buy_change(self, score, category):
-        """Calculate expected change for BUY predictions (keep the logic that worked)"""
+        """Calculate expected change for BUY predictions (enhanced for growth opportunities)"""
         if category in ['penny', 'micro_penny']:
-            base_change = 8 + (score - 65) * 0.4  # 8-25% range
-            return max(8, min(25, base_change))
+            # Enhanced range for penny stocks with growth potential
+            base_change = 10 + (score - 65) * 0.6  # 10-35% range (increased from 8-25%)
+            return max(10, min(35, base_change))
         elif category in ['micro_cap', 'small_cap']:
-            base_change = 5 + (score - 65) * 0.3  # 5-15% range
-            return max(5, min(15, base_change))
+            # Enhanced range for small caps with growth potential
+            base_change = 7 + (score - 65) * 0.4  # 7-20% range (increased from 5-15%)
+            return max(7, min(20, base_change))
         else:  # Large caps
-            base_change = 3 + (score - 65) * 0.2  # 3-10% range
-            return max(3, min(10, base_change))
+            # Enhanced range for large caps with growth potential
+            base_change = 4 + (score - 65) * 0.3  # 4-15% range (increased from 3-10%)
+            return max(4, min(15, base_change))
 
     def _calculate_enhanced_sell_change(self, score, category, sell_signals):
         """Enhanced SELL change calculation with category-specific ranges"""
