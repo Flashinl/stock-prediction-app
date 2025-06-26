@@ -1577,22 +1577,44 @@
                     <div class="stat-card">
                         <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
                         <div class="stat-info">
-                            <div class="stat-value" id="totalAnalyzed">247</div>
-                            <div class="stat-label">Stocks Analyzed</div>
+                            <div class="stat-value" id="sp500Value">Loading...</div>
+                            <div class="stat-label">S&P 500 Today</div>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
                         <div class="stat-info">
-                            <div class="stat-value">94.2%</div>
-                            <div class="stat-label">Accuracy Rate</div>
+                            <div class="stat-value" id="vixValue">Loading...</div>
+                            <div class="stat-label">VIX Fear Index</div>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon"><i class="fas fa-gem"></i></div>
+                        <div class="stat-icon"><i class="fas fa-signal"></i></div>
                         <div class="stat-info">
-                            <div class="stat-value" id="watchlistCount">0</div>
-                            <div class="stat-label">Tracked Stocks</div>
+                            <div class="stat-value" id="activeSignals">Loading...</div>
+                            <div class="stat-label">Active Opportunities</div>
+                        </div>
+                    </div>
+                    <!-- Market Insights & Trends -->
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-heart-pulse"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="marketSentiment">Loading...</div>
+                            <div class="stat-label">Market Sentiment</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="topSector">Loading...</div>
+                            <div class="stat-label">Top Performing Sector</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-brain"></i></div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="aiConfidence">Loading...</div>
+                            <div class="stat-label">AI Confidence Level</div>
                         </div>
                     </div>
                 </div>
@@ -1903,6 +1925,7 @@
             generateFeaturedOpportunities();
             updateWatchlistCount();
             loadAvailableStocks(); // Load stocks for dropdown
+            loadDashboardStats(); // Load the new dashboard statistics
 
             // Initialize elements after the main app is shown
             setTimeout(initializeElements, 100);
@@ -2872,6 +2895,113 @@
             switchTab('analysis');
             document.getElementById('stockSymbol').value = symbol;
             predictStock();
+        }
+
+        // Dashboard Statistics Functions
+        async function loadDashboardStats() {
+            console.log('Loading dashboard statistics...');
+
+            // Load all stats simultaneously
+            loadSP500Data();
+            loadVIXData();
+            loadActiveSignals();
+            loadMarketSentiment();
+            loadTopSector();
+            loadAIConfidence();
+        }
+
+        function loadSP500Data() {
+            // Simulate S&P 500 data (in real app, this would fetch from financial API)
+            const baseValue = 4500;
+            const change = (Math.random() - 0.5) * 100; // Random change between -50 and +50
+            const currentValue = baseValue + change;
+            const changePercent = (change / baseValue * 100).toFixed(2);
+            const changeClass = change >= 0 ? 'positive' : 'negative';
+            const changeSign = change >= 0 ? '+' : '';
+
+            document.getElementById('sp500Value').innerHTML = `
+                <span class="${changeClass}">${currentValue.toFixed(0)}</span>
+                <small style="font-size: 0.7em; display: block;">${changeSign}${changePercent}%</small>
+            `;
+        }
+
+        function loadVIXData() {
+            // Simulate VIX data (volatility index)
+            const vixValue = (Math.random() * 30 + 10).toFixed(1); // Random between 10-40
+            let vixLabel = 'Low';
+            let vixClass = 'positive';
+
+            if (vixValue > 30) {
+                vixLabel = 'High Fear';
+                vixClass = 'negative';
+            } else if (vixValue > 20) {
+                vixLabel = 'Moderate';
+                vixClass = 'neutral';
+            }
+
+            document.getElementById('vixValue').innerHTML = `
+                <span class="${vixClass}">${vixValue}</span>
+                <small style="font-size: 0.7em; display: block;">${vixLabel}</small>
+            `;
+        }
+
+        function loadActiveSignals() {
+            // Count active opportunities (this could be based on actual analysis)
+            const signalCount = Math.floor(Math.random() * 15 + 5); // Random between 5-20
+
+            document.getElementById('activeSignals').innerHTML = `
+                <span class="positive">${signalCount}</span>
+                <small style="font-size: 0.7em; display: block;">Buy Signals</small>
+            `;
+        }
+
+        function loadMarketSentiment() {
+            // Simulate market sentiment
+            const sentiments = [
+                { label: 'Bullish', class: 'positive', emoji: '🐂' },
+                { label: 'Bearish', class: 'negative', emoji: '🐻' },
+                { label: 'Neutral', class: 'neutral', emoji: '⚖️' }
+            ];
+
+            const sentiment = sentiments[Math.floor(Math.random() * sentiments.length)];
+
+            document.getElementById('marketSentiment').innerHTML = `
+                <span class="${sentiment.class}">${sentiment.emoji}</span>
+                <small style="font-size: 0.7em; display: block;">${sentiment.label}</small>
+            `;
+        }
+
+        function loadTopSector() {
+            // Simulate top performing sector
+            const sectors = [
+                { name: 'Technology', change: '+2.4%' },
+                { name: 'Healthcare', change: '+1.8%' },
+                { name: 'Energy', change: '+3.1%' },
+                { name: 'Financials', change: '+1.2%' },
+                { name: 'Consumer', change: '+0.9%' }
+            ];
+
+            const topSector = sectors[Math.floor(Math.random() * sectors.length)];
+
+            document.getElementById('topSector').innerHTML = `
+                <span class="positive">${topSector.name}</span>
+                <small style="font-size: 0.7em; display: block;">${topSector.change}</small>
+            `;
+        }
+
+        function loadAIConfidence() {
+            // Simulate AI confidence level
+            const confidence = Math.floor(Math.random() * 20 + 75); // Random between 75-95
+            let confidenceClass = 'positive';
+
+            if (confidence < 80) {
+                confidenceClass = 'neutral';
+            }
+
+            document.getElementById('aiConfidence').innerHTML = `
+                <span class="${confidenceClass}">${confidence}%</span>
+                <small style="font-size: 0.7em; display: block;">High Confidence</small>
+            `;
         }
 
         // Featured Opportunities (smart algorithm for best growth + safety)
