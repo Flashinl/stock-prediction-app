@@ -3141,15 +3141,15 @@
                             const prediction = await response.json();
                             console.log(`Prediction for ${symbol}:`, prediction);
 
-                            // More aggressive filtering for high-growth opportunities
+                            // Balanced filtering for quality growth opportunities
                             if (!prediction.error &&
-                                prediction.expected_change_percent >= 5 && // Higher threshold for meaningful growth
-                                prediction.confidence >= 50 && // Lower confidence to capture speculative opportunities
-                                (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG') || prediction.prediction.includes('SPECULATIVE'))) {
+                                prediction.expected_change_percent >= 6 && // Meaningful growth threshold
+                                prediction.confidence >= 60 && // Reasonable confidence requirement
+                                (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG'))) { // Remove SPECULATIVE from main filter
                                 const safetyScore = calculateSafetyScore(prediction);
                                 const growthScore = calculateGrowthScore(prediction);
                                 const hiddenGemScore = calculateHiddenGemScore(prediction);
-                                const overallScore = (safetyScore * 0.1) + (growthScore * 0.7) + (hiddenGemScore * 0.2); // Heavily favor growth potential
+                                const overallScore = (safetyScore * 0.25) + (growthScore * 0.55) + (hiddenGemScore * 0.2); // Balanced weighting
 
                                 candidates.push({
                                     symbol: prediction.symbol,
@@ -3206,14 +3206,14 @@
                             if (response.ok) {
                                 const prediction = await response.json();
                                 if (!prediction.error &&
-                                    prediction.expected_change_percent >= 4 && // Maintain meaningful growth threshold
-                                    prediction.confidence >= 45 && // Lower confidence for speculative opportunities
-                                    (prediction.prediction.includes('BUY') || prediction.prediction.includes('SPECULATIVE'))) { // Focus on BUY/SPECULATIVE only
+                                    prediction.expected_change_percent >= 5 && // Maintain quality threshold
+                                    prediction.confidence >= 55 && // Reasonable confidence for backup
+                                    (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG'))) { // Focus on quality BUY signals
 
                                     const safetyScore = calculateSafetyScore(prediction);
                                     const growthScore = calculateGrowthScore(prediction);
                                     const hiddenGemScore = calculateHiddenGemScore(prediction);
-                                    const overallScore = (safetyScore * 0.1) + (growthScore * 0.7) + (hiddenGemScore * 0.2); // Growth-focused weighting
+                                    const overallScore = (safetyScore * 0.25) + (growthScore * 0.55) + (hiddenGemScore * 0.2); // Balanced weighting
 
                                     candidates.push({
                                         symbol: prediction.symbol,

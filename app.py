@@ -1070,32 +1070,28 @@ class StockPredictor:
         elif volume_ratio < 0.5:
             score -= 10
 
-        # === GROWTH-SPECIFIC ENHANCEMENTS ===
-        # Add bonus points for growth momentum patterns
+        # === SELECTIVE GROWTH ENHANCEMENTS ===
+        # Add modest bonus points for genuine growth patterns only
 
-        # Strong upward momentum with volume confirmation
-        if price_momentum > 3 and volume_ratio > 1.2:
-            score += 8  # Growth momentum bonus
+        # Strong upward momentum with volume confirmation (more selective)
+        if price_momentum > 5 and volume_ratio > 1.5:
+            score += 5  # Reduced bonus for genuine momentum
 
-        # RSI in growth sweet spot (not overbought but showing strength)
-        if 45 <= rsi <= 65:
-            score += 5  # Healthy growth momentum
+        # RSI in healthy growth range (more restrictive)
+        if 50 <= rsi <= 60:
+            score += 3  # Smaller bonus for optimal RSI
 
-        # Price above both moving averages with good separation
+        # Strong trend with significant separation (more selective)
         if current_price > sma_20 and sma_20 > sma_50:
             ma_separation = (sma_20 - sma_50) / sma_50 * 100
-            if ma_separation > 2:  # Strong trend separation
-                score += 6  # Trend strength bonus
+            if ma_separation > 3:  # Higher threshold for trend strength
+                score += 4  # Reduced trend bonus
 
-        # Bollinger band breakout potential (near upper band but not extreme)
-        if 0.7 <= bb_position <= 0.9:
-            score += 4  # Breakout potential bonus
+        # MACD strong positive momentum (more selective)
+        if macd > 1.0:  # Higher threshold for MACD bonus
+            score += 3  # Reduced momentum bonus
 
-        # MACD momentum acceleration
-        if macd > 0.5:  # Strong positive MACD
-            score += 5  # Strong momentum bonus
-
-        return max(0, min(110, score))  # Allow higher scores for exceptional growth opportunities
+        return max(0, min(100, score))  # Keep original score range
 
     def _calculate_momentum_strength(self, indicators):
         """Calculate overall momentum strength from multiple indicators"""
@@ -1214,41 +1210,41 @@ class StockPredictor:
             confidence = min(75, hold_confidence)
             return prediction, expected_change, reasoning, confidence
 
-        # === ENHANCED BUY LOGIC FOR GROWTH OPPORTUNITIES ===
-        # Exceptional BUY (Score ≥80) - New tier for exceptional growth
-        if score >= 80:
+        # === BALANCED BUY LOGIC (More Selective) ===
+        # Exceptional BUY (Score ≥85) - Very high threshold for exceptional cases
+        if score >= 85:
             prediction = "STRONG BUY"
-            expected_change = self._calculate_buy_change(score, category) * 1.4  # Increased multiplier
-            reasoning = "Exceptional technical strength with high growth potential"
+            expected_change = self._calculate_buy_change(score, category) * 1.3
+            reasoning = "Exceptional technical strength across all indicators"
             confidence = max(85, min(95, score))
 
-        # Strong BUY (Score ≥70) - Lowered threshold
-        elif score >= 70:
+        # Strong BUY (Score ≥75) - Original proven threshold
+        elif score >= 75:
             prediction = "STRONG BUY"
-            expected_change = self._calculate_buy_change(score, category) * 1.2
-            reasoning = "Strong technical indicators with growth momentum"
+            expected_change = self._calculate_buy_change(score, category) * 1.1
+            reasoning = "Strong bullish technical signals"
             confidence = max(80, min(90, score))
 
-        # Regular BUY (Score ≥60) - Lowered threshold for more opportunities
-        elif score >= 60:
+        # Regular BUY (Score ≥65) - Proven threshold
+        elif score >= 65:
             prediction = "BUY"
             expected_change = self._calculate_buy_change(score, category)
             reasoning = "Solid bullish technical signals"
             confidence = max(75, min(85, score))
 
-        # Growth BUY (Score ≥50 with growth indicators) - More aggressive
-        elif score >= 50 or (price_momentum > 2 and rsi < 75):
+        # Moderate BUY (Score ≥58 with strong momentum)
+        elif score >= 58 or (price_momentum > 4 and rsi < 70 and volume_ratio > 1.3):
             prediction = "BUY"
-            expected_change = self._calculate_buy_change(score, category) * 0.9  # Increased from 0.8
-            reasoning = "Positive technical momentum with growth potential"
-            confidence = max(65, min(80, score + 8))
+            expected_change = self._calculate_buy_change(score, category) * 0.85
+            reasoning = "Positive technical momentum"
+            confidence = max(65, min(80, score + 5))
 
-        # Speculative BUY (Growth opportunity with moderate signals)
-        elif score >= 45 or (rsi < 40 and price_momentum > -1):
+        # Speculative BUY (Score ≥52 with specific growth patterns)
+        elif (score >= 52 and price_momentum > 3) or (rsi < 35 and price_momentum > -1 and volume_ratio > 1.2):
             prediction = "SPECULATIVE BUY"
-            expected_change = self._calculate_buy_change(score, category) * 0.7  # Increased from 0.6
-            reasoning = "Speculative growth opportunity with technical support"
-            confidence = max(55, min(75, score + 12))
+            expected_change = self._calculate_buy_change(score, category) * 0.7
+            reasoning = "Speculative opportunity with technical support"
+            confidence = max(55, min(75, score + 8))
 
         # === FALLBACK LOGIC ===
         elif score >= 45:
@@ -1630,19 +1626,19 @@ class StockPredictor:
         }
 
     def _calculate_buy_change(self, score, category):
-        """Calculate expected change for BUY predictions (enhanced for growth opportunities)"""
+        """Calculate expected change for BUY predictions (balanced approach)"""
         if category in ['penny', 'micro_penny']:
-            # Enhanced range for penny stocks with growth potential
-            base_change = 10 + (score - 65) * 0.6  # 10-35% range (increased from 8-25%)
-            return max(10, min(35, base_change))
+            # Moderate range for penny stocks
+            base_change = 8 + (score - 65) * 0.5  # 8-28% range (slightly increased from original)
+            return max(8, min(28, base_change))
         elif category in ['micro_cap', 'small_cap']:
-            # Enhanced range for small caps with growth potential
-            base_change = 7 + (score - 65) * 0.4  # 7-20% range (increased from 5-15%)
-            return max(7, min(20, base_change))
+            # Moderate range for small caps
+            base_change = 6 + (score - 65) * 0.35  # 6-18% range (slightly increased)
+            return max(6, min(18, base_change))
         else:  # Large caps
-            # Enhanced range for large caps with growth potential
-            base_change = 4 + (score - 65) * 0.3  # 4-15% range (increased from 3-10%)
-            return max(4, min(15, base_change))
+            # Conservative range for large caps
+            base_change = 3.5 + (score - 65) * 0.25  # 3.5-12% range (slightly increased)
+            return max(3.5, min(12, base_change))
 
     def _calculate_enhanced_sell_change(self, score, category, sell_signals):
         """Enhanced SELL change calculation with category-specific ranges"""

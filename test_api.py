@@ -35,7 +35,7 @@ def test_prediction(symbol):
         return None
 
 if __name__ == "__main__":
-    # Test high-growth stocks from our enhanced candidate list
+    # Test mix of growth stocks and some that should be HOLD/SELL
     test_stocks = [
         "NVDA",  # AI leader
         "PLTR",  # AI data analytics
@@ -44,7 +44,11 @@ if __name__ == "__main__":
         "CRSP",  # Gene editing
         "SOFI",  # Fintech
         "ENPH",  # Clean energy
-        "CRWD"   # Cybersecurity
+        "CRWD",  # Cybersecurity
+        "AAPL",  # Large cap (should be more conservative)
+        "TSLA",  # Volatile stock
+        "META",  # Large tech
+        "AMZN"   # Large cap
     ]
     
     print("Testing Enhanced Stock Prediction API")
