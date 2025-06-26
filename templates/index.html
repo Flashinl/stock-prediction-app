@@ -2987,31 +2987,40 @@
                     <div class="watchlist-grid">
                         ${watchlist.map((item, index) => {
                             console.log(`Rendering item ${index}:`, item);
+
+                            // Safe data extraction with fallbacks
+                            const symbol = item.symbol || 'Unknown';
+                            const companyName = item.data?.name || item.prediction?.company_name || symbol;
+                            const currentPrice = item.data?.price || item.prediction?.current_price || item.prediction?.technical_indicators?.current_price || 0;
+                            const targetPrice = item.prediction?.target_price || 0;
+                            const prediction = item.prediction?.prediction || 'N/A';
+                            const expectedChange = item.prediction?.expected_change || item.prediction?.expected_change_percent || 0;
+
                             return `
                         <div class="watchlist-card">
                             <div class="watchlist-header-row">
-                                <div class="watchlist-symbol">${item.symbol}</div>
-                                <button class="watchlist-remove" onclick="removeFromWatchlist('${item.symbol}')">
+                                <div class="watchlist-symbol">${symbol}</div>
+                                <button class="watchlist-remove" onclick="removeFromWatchlist('${symbol}')">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
-                            <div class="watchlist-company">${item.data.name}</div>
+                            <div class="watchlist-company">${companyName}</div>
                             <div class="watchlist-metrics">
                                 <div class="watchlist-metric">
                                     <div class="watchlist-metric-label">Current Price</div>
-                                    <div class="watchlist-metric-value">$${(item.data?.price || item.prediction?.current_price || 0).toFixed(2)}</div>
+                                    <div class="watchlist-metric-value">$${currentPrice.toFixed(2)}</div>
                                 </div>
                                 <div class="watchlist-metric">
                                     <div class="watchlist-metric-label">Target Price</div>
-                                    <div class="watchlist-metric-value">$${(item.prediction?.target_price || 0).toFixed(2)}</div>
+                                    <div class="watchlist-metric-value">$${targetPrice.toFixed(2)}</div>
                                 </div>
                             </div>
                             <div class="watchlist-prediction">
                                 <div class="watchlist-prediction-label">AI Prediction</div>
-                                <div class="watchlist-prediction-value">${item.prediction?.prediction || 'N/A'} (${(item.prediction?.expected_change || item.prediction?.expected_change_percent || 0) > 0 ? '+' : ''}${(item.prediction?.expected_change || item.prediction?.expected_change_percent || 0).toFixed(1)}%)</div>
+                                <div class="watchlist-prediction-value">${prediction} (${expectedChange > 0 ? '+' : ''}${expectedChange.toFixed(1)}%)</div>
                             </div>
                             <div class="watchlist-actions">
-                                <button class="watchlist-analyze-btn" onclick="analyzeWatchlistStock('${item.symbol}')">
+                                <button class="watchlist-analyze-btn" onclick="analyzeWatchlistStock('${symbol}')">
                                     <i class="fas fa-chart-line"></i> Re-analyze
                                 </button>
                             </div>
