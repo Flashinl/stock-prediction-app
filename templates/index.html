@@ -2687,9 +2687,13 @@
 
                 <div class="technical-indicators">
                     <h3 style="margin-bottom: 25px; color: #00ff88; font-size: 1.5rem;">
-                        <i class="fas fa-chart-line"></i> Advanced Technical Analysis
+                        <i class="fas fa-chart-line"></i> Technical Analysis
                     </h3>
                     <div class="indicators-grid">
+                        <div class="indicator">
+                            <span class="indicator-label">Current Price:</span>
+                            <span class="indicator-value">$${data.technical_indicators?.current_price?.toFixed(2) || 'N/A'}</span>
+                        </div>
                         <div class="indicator">
                             <span class="indicator-label">RSI (14):</span>
                             <span class="indicator-value">${data.technical_indicators?.rsi?.toFixed(2) || 'N/A'}</span>
@@ -2703,8 +2707,20 @@
                             <span class="indicator-value">$${data.technical_indicators?.sma_50?.toFixed(2) || 'N/A'}</span>
                         </div>
                         <div class="indicator">
-                            <span class="indicator-label">MACD:</span>
+                            <span class="indicator-label">MACD Signal:</span>
                             <span class="indicator-value">${data.technical_indicators?.macd?.toFixed(4) || 'N/A'}</span>
+                        </div>
+                        <div class="indicator">
+                            <span class="indicator-label">Price Momentum:</span>
+                            <span class="indicator-value">${data.technical_indicators?.price_momentum?.toFixed(2) || 'N/A'}%</span>
+                        </div>
+                        <div class="indicator">
+                            <span class="indicator-label">Trend Strength:</span>
+                            <span class="indicator-value">${data.technical_indicators?.trend_strength?.toFixed(2) || 'N/A'}%</span>
+                        </div>
+                        <div class="indicator">
+                            <span class="indicator-label">Volume Trend:</span>
+                            <span class="indicator-value">${data.technical_indicators?.volume_trend?.toFixed(1) || 'N/A'}%</span>
                         </div>
                         <div class="indicator">
                             <span class="indicator-label">Bollinger Upper:</span>
@@ -2715,7 +2731,7 @@
                             <span class="indicator-value">$${data.technical_indicators?.bollinger_lower?.toFixed(2) || 'N/A'}</span>
                         </div>
                         <div class="indicator">
-                            <span class="indicator-label">Volume:</span>
+                            <span class="indicator-label">Daily Volume:</span>
                             <span class="indicator-value">${data.technical_indicators?.volume?.toLocaleString() || 'N/A'}</span>
                         </div>
                         <div class="indicator">

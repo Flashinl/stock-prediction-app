@@ -963,7 +963,7 @@ class StockPredictor:
             del self._prediction_cache[key]
 
     def _generate_prediction(self, stock_data, indicators, category, confidence, timeframe):
-        """Generate prediction based on advanced technical analysis and multi-factor scoring"""
+        """Generate prediction based on technical analysis and multi-factor scoring"""
         current_price = indicators['current_price']
         sma_20 = indicators.get('sma_20', current_price)
         sma_50 = indicators.get('sma_50', current_price)
