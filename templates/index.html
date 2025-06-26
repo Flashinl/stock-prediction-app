@@ -2838,7 +2838,10 @@
         }
 
         function updateWatchlistCount() {
-            document.getElementById('watchlistCount').textContent = watchlist.length;
+            const watchlistCountElement = document.getElementById('watchlistCount');
+            if (watchlistCountElement) {
+                watchlistCountElement.textContent = watchlist.length;
+            }
         }
 
         function loadWatchlist() {
@@ -3114,8 +3117,9 @@
             const candidates = [];
 
             try {
-                // Analyze more stocks to find strong buy opportunities
-                for (const symbol of stockCandidates.slice(0, 16)) { // Analyze 16 stocks for strong buy signals
+                // Analyze stocks sequentially to prevent server overload
+                for (let i = 0; i < Math.min(8, stockCandidates.length); i++) { // Reduced to 8 stocks
+                    const symbol = stockCandidates[i];
                     try {
                         console.log(`Fetching prediction for ${symbol}...`);
                         const response = await fetch('/api/predict', {
@@ -3173,6 +3177,11 @@
                     } catch (error) {
                         console.error(`Error fetching data for ${symbol}:`, error);
                     }
+
+                    // Add delay between requests to prevent server overload
+                    if (i < Math.min(7, stockCandidates.length - 1)) {
+                        await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+                    }
                 }
 
                 console.log(`Total candidates found: ${candidates.length}`);
@@ -3180,8 +3189,9 @@
                 // If we don't have enough candidates, lower the bar slightly
                 if (candidates.length < 3) {
                     console.log('Not enough candidates, lowering requirements...');
-                    // Try again with lower thresholds
-                    for (const symbol of stockCandidates.slice(16, 24)) {
+                    // Try again with lower thresholds (sequential to prevent overload)
+                    for (let i = 8; i < Math.min(12, stockCandidates.length); i++) {
+                        const symbol = stockCandidates[i];
                         try {
                             const response = await fetch('/api/predict', {
                                 method: 'POST',
@@ -3225,6 +3235,11 @@
                             }
                         } catch (error) {
                             console.error(`Error with backup symbol ${symbol}:`, error);
+                        }
+
+                        // Add delay between backup requests
+                        if (i < Math.min(11, stockCandidates.length - 1)) {
+                            await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
                         }
                     }
                 }
