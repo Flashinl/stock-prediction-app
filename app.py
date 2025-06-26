@@ -1141,36 +1141,59 @@ class StockPredictor:
         volume_ratio = volume / avg_volume if avg_volume > 0 else 1
         bb_position = (current_price - bollinger_lower) / (bollinger_upper - bollinger_lower) if bollinger_upper != bollinger_lower else 0.5
 
-        # === ENHANCED SELL DETECTION (Improve from 0% to 50-60%) ===
+        # === ENHANCED SELL DETECTION (More sensitive to bearish conditions) ===
         sell_signals = 0
         sell_confidence = 45
 
-        # 1. Downtrend + Volume Confirmation
-        if current_price < sma_20 < sma_50 and volume_ratio > 1.3:
+        # 1. Strong Downtrend + Volume Confirmation
+        if current_price < sma_20 < sma_50 and volume_ratio > 1.2:  # Lowered from 1.3
             sell_signals += 2
             sell_confidence += 15
 
-        # 2. Overbought Reversal
-        if rsi > 75 and price_momentum < -1:
+        # 2. Overbought Reversal (more sensitive)
+        if rsi > 70 and price_momentum < -1:  # Lowered from 75
             sell_signals += 2
             sell_confidence += 12
 
-        # 3. Momentum Breakdown
-        if price_momentum < -5 and current_price < sma_20:
+        # 3. Momentum Breakdown (more sensitive)
+        if price_momentum < -4 and current_price < sma_20:  # Lowered from -5
             sell_signals += 2
             sell_confidence += 10
 
-        # 4. Volume Selling Pressure
-        if volume_ratio > 1.5 and price_momentum < -3:
+        # 4. Volume Selling Pressure (more sensitive)
+        if volume_ratio > 1.3 and price_momentum < -2:  # Lowered thresholds
             sell_signals += 1
             sell_confidence += 8
 
-        # Strong SELL if multiple signals + weak score
-        if sell_signals >= 3 and score <= 40:
+        # 5. NEW: Bollinger Band Breakdown
+        if current_price < bollinger_lower and price_momentum < -2:
+            sell_signals += 2
+            sell_confidence += 12
+
+        # 6. NEW: Severe Oversold with Continued Decline
+        if rsi < 25 and price_momentum < -3:  # Oversold but still falling
+            sell_signals += 1
+            sell_confidence += 8
+
+        # 7. NEW: Moving Average Death Cross Pattern
+        if sma_20 < sma_50 * 0.98:  # 20-day SMA significantly below 50-day
+            sell_signals += 1
+            sell_confidence += 6
+
+        # More aggressive SELL threshold - reduced from 3 signals to 2
+        if sell_signals >= 2 and score <= 45:  # Increased score threshold from 40 to 45
             prediction = "SELL"
             expected_change = self._calculate_enhanced_sell_change(score, category, sell_signals)
-            reasoning = f"Multiple bearish signals detected ({sell_signals} confirmations)"
-            confidence = min(80, sell_confidence)
+            reasoning = f"Strong bearish momentum detected ({sell_signals} confirmations)"
+            confidence = min(85, sell_confidence)
+            return prediction, expected_change, reasoning, confidence
+
+        # Secondary SELL condition for very weak fundamentals
+        if sell_signals >= 1 and score <= 30:  # Very weak score with at least 1 signal
+            prediction = "SELL"
+            expected_change = self._calculate_enhanced_sell_change(score, category, max(2, sell_signals))  # Minimum 2 signals for calculation
+            reasoning = f"Weak fundamentals with bearish technical signals"
+            confidence = min(75, sell_confidence + 5)
             return prediction, expected_change, reasoning, confidence
 
         # === ENHANCED HOLD/CONSOLIDATION DETECTION (Improve from 25% to 55-65%) ===
@@ -1641,25 +1664,34 @@ class StockPredictor:
             return max(3.5, min(12, base_change))
 
     def _calculate_enhanced_sell_change(self, score, category, sell_signals):
-        """Enhanced SELL change calculation with category-specific ranges"""
-        # Base negative change based on score weakness
-        base_change = -(50 - score) * 0.5
+        """Enhanced SELL change calculation with more realistic decline predictions"""
+        # More aggressive base calculation - lower scores should predict bigger declines
+        score_weakness = max(0, 50 - score)  # 0-50 range
+        base_decline = -(score_weakness * 0.8)  # More aggressive multiplier
 
-        # Amplify based on sell signal strength
-        signal_multiplier = 1 + (sell_signals * 0.2)
+        # Strong amplification based on sell signal strength
+        signal_multiplier = 1 + (sell_signals * 0.4)  # Increased from 0.2 to 0.4
+
+        # Additional momentum factor for very weak scores
+        if score <= 25:
+            momentum_boost = -5  # Extra -5% for very weak fundamentals
+        elif score <= 35:
+            momentum_boost = -3  # Extra -3% for weak fundamentals
+        else:
+            momentum_boost = 0
 
         if category in ['penny', 'micro_penny']:
-            # Penny stocks: -30% to -5% range
-            enhanced_change = base_change * signal_multiplier
-            return max(-30, min(-5, enhanced_change))
+            # Penny stocks: -45% to -8% range (increased from -30% to -5%)
+            enhanced_change = (base_decline * signal_multiplier) + momentum_boost
+            return max(-45, min(-8, enhanced_change))
         elif category in ['micro_cap', 'small_cap']:
-            # Small caps: -20% to -3% range
-            enhanced_change = base_change * signal_multiplier * 0.7
-            return max(-20, min(-3, enhanced_change))
+            # Small caps: -35% to -6% range (increased from -20% to -3%)
+            enhanced_change = (base_decline * signal_multiplier * 0.8) + momentum_boost
+            return max(-35, min(-6, enhanced_change))
         else:  # Large caps
-            # Large caps: -12% to -2% range
-            enhanced_change = base_change * signal_multiplier * 0.4
-            return max(-12, min(-2, enhanced_change))
+            # Large caps: -25% to -4% range (increased from -12% to -2%)
+            enhanced_change = (base_decline * signal_multiplier * 0.6) + momentum_boost
+            return max(-25, min(-4, enhanced_change))
 
     def _calculate_enhanced_hold_change(self, score, category, hold_signals):
         """Enhanced HOLD change calculation with category-specific ranges"""
