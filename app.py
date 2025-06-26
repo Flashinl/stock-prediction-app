@@ -699,8 +699,40 @@ class StockPredictor:
             else:
                 vol_value = current_price * 0.02  # 2% default volatility
 
-            # Volume
+            # Volume and Volume Analysis
             volume = int(data['Volume'].iloc[-1]) if not pd.isna(data['Volume'].iloc[-1]) else 1000000
+
+            # Average volume (20-day)
+            if len(data) >= 20:
+                avg_volume = data['Volume'].rolling(window=20).mean().iloc[-1]
+                avg_volume = int(avg_volume) if not pd.isna(avg_volume) else volume
+            else:
+                avg_volume = volume
+
+            # Volume trend (increasing/decreasing)
+            if len(data) >= 5:
+                recent_volume = data['Volume'].tail(5).mean()
+                older_volume = data['Volume'].tail(10).head(5).mean() if len(data) >= 10 else recent_volume
+                volume_trend = (recent_volume - older_volume) / older_volume * 100 if older_volume > 0 else 0
+            else:
+                volume_trend = 0
+
+            # Price momentum (rate of change)
+            if len(data) >= 10:
+                price_momentum = (current_price - data['Close'].iloc[-10]) / data['Close'].iloc[-10] * 100
+            else:
+                price_momentum = 0
+
+            # Trend strength (ADX-like calculation)
+            if len(data) >= 14:
+                high_low = data['High'] - data['Low']
+                high_close = abs(data['High'] - data['Close'].shift())
+                low_close = abs(data['Low'] - data['Close'].shift())
+                true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+                atr = true_range.rolling(window=14).mean().iloc[-1]
+                trend_strength = (atr / current_price) * 100 if not pd.isna(atr) else 2.0
+            else:
+                trend_strength = 2.0
 
             return {
                 'current_price': current_price,
@@ -711,7 +743,11 @@ class StockPredictor:
                 'bollinger_upper': bb_upper,
                 'bollinger_lower': bb_lower,
                 'volatility': (vol_value / current_price) * 100,  # Convert to percentage
-                'volume': volume
+                'volume': volume,
+                'avg_volume': avg_volume,
+                'volume_trend': volume_trend,
+                'price_momentum': price_momentum,
+                'trend_strength': trend_strength
             }
 
         except Exception as e:
@@ -927,79 +963,37 @@ class StockPredictor:
             del self._prediction_cache[key]
 
     def _generate_prediction(self, stock_data, indicators, category, confidence, timeframe):
-        """Generate prediction based on stock category, technical analysis, and timeframe"""
+        """Generate prediction based on advanced technical analysis and multi-factor scoring"""
         current_price = indicators['current_price']
         sma_20 = indicators.get('sma_20', current_price)
+        sma_50 = indicators.get('sma_50', current_price)
         rsi = indicators.get('rsi', 50)
-        volume = stock_data.get('volume', 0)
-        avg_volume = stock_data.get('avg_volume', volume)
+        macd = indicators.get('macd', 0)
+        volume = indicators.get('volume', 0)
+        avg_volume = indicators.get('avg_volume', volume)
+        volume_trend = indicators.get('volume_trend', 0)
+        price_momentum = indicators.get('price_momentum', 0)
+        trend_strength = indicators.get('trend_strength', 2.0)
+        bollinger_upper = indicators.get('bollinger_upper', current_price * 1.05)
+        bollinger_lower = indicators.get('bollinger_lower', current_price * 0.95)
 
-        # Create deterministic seed based on stock symbol and stable data
-        symbol = stock_data.get('symbol', 'UNKNOWN')
-        # Use more stable values for consistent predictions
-        # Round price to nearest dollar and RSI to nearest 5 to reduce micro-variations
-        stable_price = round(current_price)
-        stable_rsi = round(rsi / 5) * 5  # Round to nearest 5
-        seed_value = hash(symbol + str(stable_price) + str(stable_rsi)) % 2147483647
-        np.random.seed(seed_value)
+        # Calculate comprehensive technical scores
+        technical_score = self._calculate_technical_score(indicators)
+        momentum_score = self._calculate_momentum_score(indicators)
+        volume_score = self._calculate_volume_score(indicators)
+        trend_score = self._calculate_trend_score(indicators)
 
-        # Basic trend analysis
-        price_trend = (current_price - sma_20) / sma_20 * 100 if sma_20 else 0
-        volume_ratio = volume / avg_volume if avg_volume > 0 else 1
+        # Combine scores with category-specific weights
+        category_weights = self._get_category_weights(category)
+        overall_score = (
+            technical_score * category_weights['technical'] +
+            momentum_score * category_weights['momentum'] +
+            volume_score * category_weights['volume'] +
+            trend_score * category_weights['trend']
+        )
 
-        # Category-specific prediction logic
-        if category in ['penny', 'micro_penny']:
-            # Penny stocks - more conservative predictions
-            if rsi < 25 and price_trend < -10 and volume_ratio > 2:
-                prediction = "SPECULATIVE BUY"
-                expected_change = np.random.uniform(10, 50)
-                reasoning = "Oversold penny stock with high volume spike - potential reversal"
-            elif rsi > 75 and price_trend > 15:
-                prediction = "SELL"
-                expected_change = np.random.uniform(-30, -10)
-                reasoning = "Overbought penny stock - high risk of correction"
-            else:
-                prediction = "HOLD/AVOID"
-                expected_change = np.random.uniform(-15, 15)
-                reasoning = "Penny stock with unclear signals - high volatility expected"
-
-        elif category in ['micro_cap', 'small_cap']:
-            # Small caps - moderate volatility
-            if rsi < 30 and price_trend < -5 and volume_ratio > 1.5:
-                prediction = "BUY"
-                expected_change = np.random.uniform(5, 20)
-                reasoning = "Oversold small cap with volume support - potential recovery"
-            elif rsi > 70 and price_trend > 8:
-                prediction = "SELL"
-                expected_change = np.random.uniform(-15, -5)
-                reasoning = "Overbought small cap - profit taking likely"
-            elif price_trend > 3:
-                prediction = "HOLD/BUY"
-                expected_change = np.random.uniform(2, 12)
-                reasoning = "Small cap in uptrend - momentum may continue"
-            else:
-                prediction = "HOLD"
-                expected_change = np.random.uniform(-5, 5)
-                reasoning = "Small cap consolidating - waiting for direction"
-
-        else:
-            # Large/mid caps - more stable predictions
-            if rsi < 30 and price_trend < -3:
-                prediction = "BUY"
-                expected_change = np.random.uniform(3, 12)
-                reasoning = "Oversold large cap - institutional buying opportunity"
-            elif rsi > 70 and price_trend > 5:
-                prediction = "SELL"
-                expected_change = np.random.uniform(-10, -3)
-                reasoning = "Overbought large cap - correction expected"
-            elif price_trend > 2:
-                prediction = "HOLD/BUY"
-                expected_change = np.random.uniform(1, 8)
-                reasoning = "Large cap in steady uptrend - fundamentals support"
-            else:
-                prediction = "HOLD"
-                expected_change = np.random.uniform(-3, 3)
-                reasoning = "Large cap in consolidation - stable outlook"
+        # Generate prediction based on overall score
+        prediction, expected_change, reasoning = self._score_to_prediction(overall_score, category, indicators)
 
         # Scale expected change based on timeframe
         timeframe_multiplier = self._get_timeframe_multiplier(timeframe)
@@ -1013,6 +1007,233 @@ class StockPredictor:
             'target_price': target_price,
             'reasoning': reasoning
         }
+
+    def _calculate_technical_score(self, indicators):
+        """Calculate technical analysis score (0-100)"""
+        current_price = indicators['current_price']
+        sma_20 = indicators.get('sma_20', current_price)
+        sma_50 = indicators.get('sma_50', current_price)
+        rsi = indicators.get('rsi', 50)
+        bollinger_upper = indicators.get('bollinger_upper', current_price * 1.05)
+        bollinger_lower = indicators.get('bollinger_lower', current_price * 0.95)
+
+        score = 50  # Neutral starting point
+
+        # RSI analysis (30 points)
+        if rsi < 30:
+            score += 15  # Oversold - bullish
+        elif rsi > 70:
+            score -= 15  # Overbought - bearish
+        elif 40 <= rsi <= 60:
+            score += 5   # Neutral zone - slightly positive
+
+        # Moving average analysis (25 points)
+        if current_price > sma_20 > sma_50:
+            score += 15  # Strong uptrend
+        elif current_price > sma_20:
+            score += 8   # Above short-term MA
+        elif current_price < sma_20 < sma_50:
+            score -= 15  # Strong downtrend
+        elif current_price < sma_20:
+            score -= 8   # Below short-term MA
+
+        # Bollinger Bands analysis (15 points)
+        bb_position = (current_price - bollinger_lower) / (bollinger_upper - bollinger_lower)
+        if bb_position < 0.2:
+            score += 10  # Near lower band - oversold
+        elif bb_position > 0.8:
+            score -= 10  # Near upper band - overbought
+        elif 0.4 <= bb_position <= 0.6:
+            score += 3   # Middle range - stable
+
+        return max(0, min(100, score))
+
+    def _calculate_momentum_score(self, indicators):
+        """Calculate momentum score (0-100)"""
+        macd = indicators.get('macd', 0)
+        price_momentum = indicators.get('price_momentum', 0)
+
+        score = 50  # Neutral starting point
+
+        # MACD analysis (40 points)
+        if macd > 0:
+            score += min(20, abs(macd) * 2)  # Positive MACD
+        else:
+            score -= min(20, abs(macd) * 2)  # Negative MACD
+
+        # Price momentum analysis (40 points)
+        if price_momentum > 5:
+            score += 20  # Strong positive momentum
+        elif price_momentum > 0:
+            score += min(15, price_momentum * 3)  # Moderate positive momentum
+        elif price_momentum < -5:
+            score -= 20  # Strong negative momentum
+        else:
+            score -= min(15, abs(price_momentum) * 3)  # Moderate negative momentum
+
+        return max(0, min(100, score))
+
+    def _calculate_volume_score(self, indicators):
+        """Calculate volume score (0-100)"""
+        volume = indicators.get('volume', 0)
+        avg_volume = indicators.get('avg_volume', volume)
+        volume_trend = indicators.get('volume_trend', 0)
+
+        score = 50  # Neutral starting point
+
+        # Volume ratio analysis (50 points)
+        volume_ratio = volume / avg_volume if avg_volume > 0 else 1
+        if volume_ratio > 2:
+            score += 25  # Very high volume
+        elif volume_ratio > 1.5:
+            score += 15  # High volume
+        elif volume_ratio > 1.2:
+            score += 8   # Above average volume
+        elif volume_ratio < 0.5:
+            score -= 15  # Low volume
+
+        # Volume trend analysis (30 points)
+        if volume_trend > 20:
+            score += 15  # Strong increasing volume
+        elif volume_trend > 0:
+            score += min(10, volume_trend / 2)  # Increasing volume
+        elif volume_trend < -20:
+            score -= 15  # Strong decreasing volume
+        else:
+            score -= min(10, abs(volume_trend) / 2)  # Decreasing volume
+
+        return max(0, min(100, score))
+
+    def _calculate_trend_score(self, indicators):
+        """Calculate trend strength score (0-100)"""
+        current_price = indicators['current_price']
+        sma_20 = indicators.get('sma_20', current_price)
+        trend_strength = indicators.get('trend_strength', 2.0)
+
+        score = 50  # Neutral starting point
+
+        # Price vs SMA trend (50 points)
+        price_vs_sma = (current_price - sma_20) / sma_20 * 100 if sma_20 > 0 else 0
+        if price_vs_sma > 5:
+            score += 25  # Strong uptrend
+        elif price_vs_sma > 2:
+            score += 15  # Moderate uptrend
+        elif price_vs_sma > 0:
+            score += 8   # Weak uptrend
+        elif price_vs_sma < -5:
+            score -= 25  # Strong downtrend
+        elif price_vs_sma < -2:
+            score -= 15  # Moderate downtrend
+        else:
+            score -= 8   # Weak downtrend
+
+        # Trend strength (volatility-adjusted) (30 points)
+        if trend_strength < 1.5:
+            score += 15  # Low volatility - strong trend
+        elif trend_strength < 3:
+            score += 8   # Moderate volatility
+        elif trend_strength > 5:
+            score -= 15  # High volatility - weak trend
+
+        return max(0, min(100, score))
+
+    def _get_category_weights(self, category):
+        """Get scoring weights based on stock category"""
+        if category in ['penny', 'micro_penny']:
+            return {
+                'technical': 0.2,  # Less reliable for penny stocks
+                'momentum': 0.3,   # Important for volatility
+                'volume': 0.4,     # Critical for penny stocks
+                'trend': 0.1       # Less reliable
+            }
+        elif category in ['micro_cap', 'small_cap']:
+            return {
+                'technical': 0.3,
+                'momentum': 0.3,
+                'volume': 0.25,
+                'trend': 0.15
+            }
+        else:  # Large/mid caps
+            return {
+                'technical': 0.4,  # More reliable for large caps
+                'momentum': 0.25,
+                'volume': 0.15,
+                'trend': 0.2
+            }
+
+    def _score_to_prediction(self, overall_score, category, indicators):
+        """Convert overall score to prediction, expected change, and reasoning"""
+        # Adjust score ranges based on category
+        if category in ['penny', 'micro_penny']:
+            # More conservative thresholds for penny stocks
+            if overall_score >= 75:
+                prediction = "SPECULATIVE BUY"
+                expected_change = 15 + (overall_score - 75) * 0.8  # 15-35%
+                reasoning = "Strong technical signals with high volume support"
+            elif overall_score >= 60:
+                prediction = "BUY"
+                expected_change = 8 + (overall_score - 60) * 0.5   # 8-15%
+                reasoning = "Positive momentum with volume confirmation"
+            elif overall_score <= 25:
+                prediction = "SELL"
+                expected_change = -25 + (overall_score - 25) * 0.6  # -25% to 0%
+                reasoning = "Weak technicals suggest continued decline"
+            elif overall_score <= 40:
+                prediction = "HOLD/AVOID"
+                expected_change = -5 + (overall_score - 40) * 0.3   # -5% to 0%
+                reasoning = "Mixed signals - high volatility expected"
+            else:
+                prediction = "HOLD"
+                expected_change = (overall_score - 50) * 0.2        # -2% to +2%
+                reasoning = "Consolidating with unclear direction"
+
+        elif category in ['micro_cap', 'small_cap']:
+            # Moderate thresholds for small caps
+            if overall_score >= 70:
+                prediction = "STRONG BUY"
+                expected_change = 12 + (overall_score - 70) * 0.4   # 12-24%
+                reasoning = "Strong technical setup with momentum"
+            elif overall_score >= 60:
+                prediction = "BUY"
+                expected_change = 6 + (overall_score - 60) * 0.6    # 6-12%
+                reasoning = "Positive technical indicators align"
+            elif overall_score <= 30:
+                prediction = "SELL"
+                expected_change = -15 + (overall_score - 30) * 0.5  # -15% to 0%
+                reasoning = "Technical breakdown with volume confirmation"
+            elif overall_score <= 45:
+                prediction = "HOLD"
+                expected_change = -3 + (overall_score - 45) * 0.2   # -3% to 0%
+                reasoning = "Weak momentum suggests caution"
+            else:
+                prediction = "HOLD/BUY"
+                expected_change = (overall_score - 50) * 0.25       # -1.25% to +2.5%
+                reasoning = "Neutral to positive technical outlook"
+
+        else:  # Large/mid caps
+            # Conservative thresholds for large caps
+            if overall_score >= 75:
+                prediction = "STRONG BUY"
+                expected_change = 8 + (overall_score - 75) * 0.3    # 8-15.5%
+                reasoning = "Excellent technical setup with institutional support"
+            elif overall_score >= 65:
+                prediction = "BUY"
+                expected_change = 4 + (overall_score - 65) * 0.4    # 4-8%
+                reasoning = "Strong technical indicators suggest upside"
+            elif overall_score <= 25:
+                prediction = "SELL"
+                expected_change = -10 + (overall_score - 25) * 0.4  # -10% to 0%
+                reasoning = "Technical deterioration suggests downside"
+            elif overall_score <= 40:
+                prediction = "HOLD"
+                expected_change = -2 + (overall_score - 40) * 0.15  # -2% to 0%
+                reasoning = "Weak technicals suggest limited upside"
+            else:
+                prediction = "HOLD/BUY"
+                expected_change = (overall_score - 50) * 0.2        # -2% to +2%
+                reasoning = "Stable technical outlook with modest upside"
+
+        return prediction, expected_change, reasoning
 
     def _get_timeframe_multiplier(self, timeframe):
         """Get multiplier for expected change based on timeframe"""
