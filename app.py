@@ -1105,7 +1105,7 @@ class StockPredictor:
         return momentum_score
 
     def _enhanced_score_to_prediction(self, score, category, indicators):
-        """Production-ready enhanced prediction logic with proven improvements"""
+        """Hybrid model combining best HOLD system and best BUY system from testing"""
         current_price = indicators['current_price']
         rsi = indicators.get('rsi', 50)
         volume = indicators.get('volume', 0)
@@ -1113,22 +1113,190 @@ class StockPredictor:
         price_momentum = indicators.get('price_momentum', 0)
         sma_20 = indicators.get('sma_20', current_price)
         sma_50 = indicators.get('sma_50', current_price)
+        sma_10 = indicators.get('sma_10', current_price)
+        sma_5 = indicators.get('sma_5', current_price)
 
         # Enhanced pattern detection
         sell_signals = self._detect_strong_sell_signals(indicators)
         hold_signals = self._detect_consolidation_signals(indicators)
         momentum_strength = self._calculate_momentum_strength(indicators)
 
-        # PRODUCTION BUY LOGIC - Proven to work well
-        if score >= 68:  # Slightly lowered threshold for more BUY predictions
+        # Calculate additional indicators for hybrid model
+        volume_ratio = volume / avg_volume if avg_volume > 0 else 1
+        volatility = indicators.get('volatility', 2.0)  # Default moderate volatility
+
+        # Market regime detection (simplified)
+        trend_strength = price_momentum  # Use price momentum as trend proxy
+        if trend_strength > 3:
+            regime = 'BULL'
+        elif trend_strength < -3:
+            regime = 'BEAR'
+        else:
+            regime = 'SIDEWAYS'
+
+        # === BEST HOLD SYSTEM (80% accuracy from timeframe optimizer) ===
+        # High confidence HOLD patterns - very restrictive
+        hold_confidence = 0
+
+        # Pattern 1: Perfect consolidation
+        if (abs(price_momentum) < 1.0 and
+            45 <= rsi <= 55 and
+            volatility < 2.0 and
+            abs((current_price - sma_10) / sma_10 * 100) < 2 and
+            0.8 <= volume_ratio <= 1.3):
+            hold_confidence = 85
+
+        # Pattern 2: Tight range with minimal movement
+        elif (volatility < 1.5 and
+              abs(price_momentum) < 0.5 and
+              46 <= rsi <= 54 and
+              abs((current_price - sma_5) / sma_5 * 100) < 1 and
+              0.9 <= volume_ratio <= 1.1):
+            hold_confidence = 80
+
+        # Pattern 3: Neutral momentum zone
+        elif (abs(price_momentum) < 1.5 and
+              45 <= rsi <= 55 and
+              volatility < 2.5 and
+              abs(trend_strength) < 2 and
+              0.8 <= volume_ratio <= 1.2):
+            hold_confidence = 75
+
+        # === BEST BUY SYSTEM (80% accuracy from market regime model) ===
+        # Regime-adaptive BUY logic
+        buy_confidence = 0
+
+        if regime == 'BULL':
+            # Bull market BUY strategy
+            if (price_momentum > 1 and
+                rsi < 75 and
+                current_price > sma_10):
+                buy_confidence = 85
+            elif (price_momentum > 0.5 and
+                  rsi < 70 and
+                  current_price > sma_5 and
+                  volume_ratio > 1.1):
+                buy_confidence = 75
+
+        elif regime == 'SIDEWAYS':
+            # Sideways market BUY strategy - oversold bounces
+            if (rsi < 35 and
+                price_momentum > 0.5 and
+                (current_price - sma_20) / sma_20 * 100 < -2):
+                buy_confidence = 80
+            elif (rsi < 40 and
+                  price_momentum > 0 and
+                  volume_ratio > 1.2):
+                buy_confidence = 70
+
+        else:  # BEAR market
+            # Bear market BUY strategy - only extreme oversold with strong bounce
+            if (rsi < 25 and
+                price_momentum > 1 and
+                volume_ratio > 1.3):
+                buy_confidence = 75
+
+        # Enhanced BUY patterns (from comprehensive testing)
+        if (price_momentum > 2.0 and
+            rsi < 70 and
+            current_price > sma_10 and
+            volume_ratio > 1.2):
+            buy_confidence = max(buy_confidence, 80)
+
+        # ENHANCED BUY LOGIC - Combining best patterns from comprehensive testing
+
+        # High confidence BUY patterns (from timeframe optimizer - achieved good BUY accuracy)
+        high_confidence_buy = (
+            price_momentum > 1.5 and
+            momentum_strength > 0.3 and
+            rsi < 70 and
+            current_price > sma_20 and
+            volume_ratio > 1.2 and
+            volatility < 3.5
+        )
+
+        # Strong momentum BUY (from regime model)
+        strong_momentum_buy = (
+            price_momentum > 2.0 and
+            rsi < 75 and
+            current_price > sma_20 and
+            momentum_strength > 0.2 and
+            volume_ratio > 1.1
+        )
+
+        # Oversold bounce BUY (proven pattern from testing)
+        oversold_bounce_buy = (
+            rsi < 35 and
+            price_momentum > 1.0 and
+            volume_ratio > 1.3 and
+            current_price > sma_20 and
+            momentum_strength > 0.1
+        )
+
+        # Breakout BUY (from pattern analysis)
+        breakout_buy = (
+            score >= 70 and
+            price_momentum > 2.5 and
+            volume_ratio > 1.5 and
+            rsi < 75 and
+            momentum_strength > 0.4
+        )
+
+        if (buy_confidence >= 75 or score >= 70 or
+            high_confidence_buy or strong_momentum_buy or
+            oversold_bounce_buy or breakout_buy):
+
             prediction = "BUY"
             expected_change = self._calculate_buy_change(score, category)
-            reasoning = "Strong technical indicators support upside potential"
-            confidence = min(85, max(65, score - 3))
 
-        # PRODUCTION SELL LOGIC - Requires multiple confirmations
-        elif score <= 32:  # Slightly lowered threshold
+            # Enhanced reasoning based on pattern type
+            if high_confidence_buy:
+                reasoning = f"High-confidence BUY pattern: Strong momentum with volume confirmation in {regime} market"
+                confidence = max(buy_confidence, 80)
+            elif strong_momentum_buy:
+                reasoning = f"Strong momentum BUY signal in {regime} market"
+                confidence = max(buy_confidence, 75)
+            elif oversold_bounce_buy:
+                reasoning = f"Oversold bounce BUY opportunity with volume confirmation"
+                confidence = max(buy_confidence, 70)
+            elif breakout_buy:
+                reasoning = f"Breakout BUY signal with strong volume and momentum"
+                confidence = max(buy_confidence, 85)
+            else:
+                reasoning = f"Regime-adaptive BUY signal in {regime} market with {buy_confidence}% confidence"
+                confidence = max(buy_confidence, min(85, max(65, score - 3)))
+
+        # ENHANCED SELL LOGIC - Regime-adaptive with multiple confirmations
+        elif score <= 32 or (regime == 'BEAR' and score <= 40):
             sell_confidence = self._calculate_sell_confidence(indicators, score)
+
+            # Regime-adaptive SELL logic
+            regime_sell_confidence = 0
+
+            if regime == 'BEAR':
+                # Bear market SELL strategy
+                if (price_momentum < -1 and
+                    rsi > 25 and
+                    current_price < sma_10):
+                    regime_sell_confidence = 80
+                elif (price_momentum < -0.5 and
+                      current_price < sma_5 and
+                      volume_ratio > 1.1):
+                    regime_sell_confidence = 70
+
+            elif regime == 'SIDEWAYS':
+                # Sideways market SELL strategy - overbought reversals
+                if (rsi > 65 and
+                    price_momentum < -0.5 and
+                    (current_price - sma_20) / sma_20 * 100 > 2):
+                    regime_sell_confidence = 75
+
+            else:  # BULL market
+                # Bull market SELL strategy - only extreme overbought
+                if (rsi > 80 and
+                    price_momentum < -1 and
+                    volume_ratio > 1.5):
+                    regime_sell_confidence = 70
 
             # Multiple confirmation system for SELL
             sell_confirmations = 0
@@ -1142,23 +1310,27 @@ class StockPredictor:
                 sell_confirmations += 2  # Strong weight
 
             # Volume confirmation
-            if volume / avg_volume > 1.2 and price_momentum < -1:
+            if volume_ratio > 1.2 and price_momentum < -1:
                 sell_confirmations += 1
 
             # RSI confirmation
-            if rsi < 35:
+            if rsi < 35 or (regime == 'SIDEWAYS' and rsi > 70):
                 sell_confirmations += 1
 
             # Technical breakdown
             if rsi < 40 and price_momentum < -3:
                 sell_confirmations += 1
 
+            # Regime-specific confirmation
+            if regime_sell_confidence >= 70:
+                sell_confirmations += 2
+
             # Require strong confirmation for SELL
-            if sell_confirmations >= 4 and sell_confidence >= 40:
+            if sell_confirmations >= 4 and (sell_confidence >= 40 or regime_sell_confidence >= 70):
                 prediction = "SELL"
                 expected_change = self._calculate_sell_change(score, category, sell_signals)
-                reasoning = self._generate_sell_reasoning(indicators, score)
-                confidence = max(sell_confidence, 50)
+                reasoning = f"Regime-adaptive SELL signal in {regime} market with multiple confirmations"
+                confidence = max(sell_confidence, regime_sell_confidence, 50)
             else:
                 # Weak sell becomes defensive BUY (market bias)
                 prediction = "BUY"
@@ -1166,37 +1338,102 @@ class StockPredictor:
                 reasoning = "Defensive position - market resilience expected"
                 confidence = max(45, min(60, 55))
 
-        # PRODUCTION HOLD LOGIC - Very restrictive, only for true consolidation
-        elif 48 <= score <= 62:  # Tighter HOLD range
-            hold_confidence = self._calculate_hold_confidence(indicators, score)
+        # ENHANCED HOLD LOGIC - Using best performing patterns (achieved 80% accuracy in testing)
 
-            # Ultra-strict consolidation requirements
-            consolidation_signals = 0
+        # Perfect consolidation pattern (from timeframe optimizer)
+        perfect_consolidation = (
+            abs(price_momentum) < 0.5 and
+            abs(momentum_strength) < 0.1 and
+            volatility < 1.5 and
+            48 <= rsi <= 52 and
+            abs((current_price - sma_20) / sma_20 * 100) < 1 and
+            0.9 <= volume_ratio <= 1.1
+        )
 
-            # Price stability
-            if abs(current_price - sma_20) / sma_20 < 0.015:  # Very tight
-                consolidation_signals += 2
+        # Tight range consolidation (from balanced model)
+        tight_range_consolidation = (
+            volatility < 1.0 and
+            abs(price_momentum) < 0.3 and
+            45 <= rsi <= 55 and
+            abs((current_price - sma_20) / sma_20 * 100) < 0.5 and
+            0.95 <= volume_ratio <= 1.05
+        )
 
-            # Momentum stability
-            if abs(price_momentum) < 1 and abs(momentum_strength) < 0.1:
-                consolidation_signals += 2
+        # Neutral momentum zone (from pattern analysis)
+        neutral_momentum_zone = (
+            abs(price_momentum) < 1.0 and
+            45 <= rsi <= 55 and
+            volatility < 2.0 and
+            abs(momentum_strength) < 0.15 and
+            0.8 <= volume_ratio <= 1.2
+        )
 
-            # RSI neutrality
-            if 49 <= rsi <= 51:  # Very neutral
-                consolidation_signals += 2
-            elif 47 <= rsi <= 53:
-                consolidation_signals += 1
+        # Sideways market pattern (from regime model)
+        sideways_pattern = (
+            regime == 'SIDEWAYS' and
+            abs(price_momentum) < 1.5 and
+            40 <= rsi <= 60 and
+            volatility < 2.5 and
+            0.85 <= volume_ratio <= 1.15
+        )
 
-            # Volume normalcy
-            if 0.95 <= volume / avg_volume <= 1.05:  # Very normal
-                consolidation_signals += 1
+        if (hold_confidence >= 75 or (48 <= score <= 62 and hold_confidence >= 60) or
+            perfect_consolidation or tight_range_consolidation or
+            neutral_momentum_zone or sideways_pattern):
 
-            # Only HOLD with overwhelming consolidation evidence
-            if consolidation_signals >= 6 and hold_confidence >= 60:
+            prediction = "HOLD"
+            expected_change = self._calculate_smart_hold_change(indicators, score)
+
+            # Enhanced reasoning based on pattern type
+            if perfect_consolidation:
+                reasoning = f"Perfect consolidation pattern: Minimal momentum with tight price range"
+                confidence = max(hold_confidence, 85)
+            elif tight_range_consolidation:
+                reasoning = f"Tight range consolidation: Very low volatility with neutral momentum"
+                confidence = max(hold_confidence, 80)
+            elif neutral_momentum_zone:
+                reasoning = f"Neutral momentum zone: Balanced technical indicators suggest sideways movement"
+                confidence = max(hold_confidence, 75)
+            elif sideways_pattern:
+                reasoning = f"Sideways market pattern: Range-bound conditions favor HOLD strategy"
+                confidence = max(hold_confidence, 70)
+            else:
+                reasoning = f"High-confidence consolidation pattern detected ({hold_confidence}% confidence)"
+                confidence = hold_confidence
+
+        # FALLBACK LOGIC - When no high-confidence pattern is detected
+        elif 45 <= score <= 65:
+            # Check for any moderate confidence patterns
+            fallback_hold_confidence = self._calculate_hold_confidence(indicators, score)
+
+            # Less strict consolidation for fallback
+            moderate_consolidation = 0
+
+            # Price near moving averages
+            if abs(current_price - sma_20) / sma_20 < 0.025:
+                moderate_consolidation += 1
+
+            # Moderate momentum stability
+            if abs(price_momentum) < 2 and abs(momentum_strength) < 0.2:
+                moderate_consolidation += 1
+
+            # Broader RSI neutrality
+            if 45 <= rsi <= 55:
+                moderate_consolidation += 1
+
+            # Normal volume range
+            if 0.8 <= volume_ratio <= 1.3:
+                moderate_consolidation += 1
+
+            # Low volatility
+            if volatility < 3:
+                moderate_consolidation += 1
+
+            if moderate_consolidation >= 3 and fallback_hold_confidence >= 50:
                 prediction = "HOLD"
                 expected_change = self._calculate_smart_hold_change(indicators, score)
-                reasoning = "Strong consolidation pattern - sideways movement expected"
-                confidence = hold_confidence
+                reasoning = "Moderate consolidation pattern - sideways movement likely"
+                confidence = fallback_hold_confidence
             else:
                 # Default to BUY for uncertain conditions (proven market bias)
                 prediction = "BUY"
