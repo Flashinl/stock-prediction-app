@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import json
 import logging
 import os
+import time
 import bcrypt
 import secrets
 import re
@@ -480,6 +481,8 @@ class MarketDataService:
 class StockPredictor:
     def __init__(self):
         self.market_data_service = MarketDataService()
+        self._prediction_cache = {}  # Simple cache for consistency
+        self._cache_timeout = 300  # 5 minutes cache
 
     def get_stock_category(self, stock_data):
         """Categorize stock based on market cap and price"""
@@ -732,6 +735,16 @@ class StockPredictor:
         try:
             logger.info(f"Starting prediction for {symbol}")
 
+            # Check cache for recent prediction to ensure consistency
+            cache_key = f"{symbol}_{timeframe_override or 'auto'}"
+            current_time = time.time()
+
+            if cache_key in self._prediction_cache:
+                cached_result, cache_time = self._prediction_cache[cache_key]
+                if current_time - cache_time < self._cache_timeout:
+                    logger.info(f"Returning cached prediction for {symbol}")
+                    return cached_result
+
             # Get stock data
             data, info = self.get_stock_data(symbol)
             logger.info(f"Stock data fetched: data={data is not None}, info={info is not None}")
@@ -866,7 +879,7 @@ class StockPredictor:
                 logger.error(f"Stock record is None for symbol {symbol}")
                 return {"error": f"Unable to create stock record for {symbol}"}
 
-            return {
+            result = {
                 "symbol": symbol.upper(),
                 "company_name": stock_record.name or symbol,
                 "exchange": stock_record.exchange or "Unknown",
@@ -890,10 +903,28 @@ class StockPredictor:
                 "prediction_data": chart_data['prediction'],
                 "volume_data": chart_data['volume']
             }
+
+            # Cache the result for consistency
+            self._prediction_cache[cache_key] = (result, current_time)
+
+            # Clean up old cache entries to prevent memory leaks
+            self._cleanup_cache(current_time)
+
+            return result
             
         except Exception as e:
             logger.error(f"Error in prediction for {symbol}: {e}")
             return {"error": f"Prediction failed: {str(e)}"}
+
+    def _cleanup_cache(self, current_time):
+        """Remove expired cache entries"""
+        expired_keys = []
+        for key, (result, cache_time) in self._prediction_cache.items():
+            if current_time - cache_time > self._cache_timeout:
+                expired_keys.append(key)
+
+        for key in expired_keys:
+            del self._prediction_cache[key]
 
     def _generate_prediction(self, stock_data, indicators, category, confidence, timeframe):
         """Generate prediction based on stock category, technical analysis, and timeframe"""
@@ -903,9 +934,13 @@ class StockPredictor:
         volume = stock_data.get('volume', 0)
         avg_volume = stock_data.get('avg_volume', volume)
 
-        # Create deterministic seed based on stock symbol and current data
+        # Create deterministic seed based on stock symbol and stable data
         symbol = stock_data.get('symbol', 'UNKNOWN')
-        seed_value = hash(symbol + str(int(current_price * 100)) + str(int(rsi))) % 2147483647
+        # Use more stable values for consistent predictions
+        # Round price to nearest dollar and RSI to nearest 5 to reduce micro-variations
+        stable_price = round(current_price)
+        stable_rsi = round(rsi / 5) * 5  # Round to nearest 5
+        seed_value = hash(symbol + str(stable_price) + str(stable_rsi)) % 2147483647
         np.random.seed(seed_value)
 
         # Basic trend analysis
