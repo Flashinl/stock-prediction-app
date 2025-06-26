@@ -1954,45 +1954,45 @@ class StockPredictor:
                 'text': f"{news_context['company_news'][0]}. {news_context['company_news'][1] if len(news_context['company_news']) > 1 else ''}"
             })
 
-        # Technical Analysis Reasoning
+        # Market Sentiment Analysis (based on underlying patterns)
         if rsi < 30:
             reasoning_points.append({
                 'icon': '📉',
-                'title': 'Oversold Conditions',
-                'text': f'RSI of {rsi:.1f} indicates the stock is oversold, suggesting potential upward price correction.'
+                'title': 'Market Oversold',
+                'text': f'Current market sentiment suggests the stock may be undervalued, creating potential for recovery as investor confidence returns.'
             })
         elif rsi > 70:
             reasoning_points.append({
                 'icon': '📈',
-                'title': 'Overbought Territory',
-                'text': f'RSI of {rsi:.1f} shows overbought conditions, indicating possible price pullback.'
+                'title': 'Strong Market Interest',
+                'text': f'High investor interest and buying pressure may lead to consolidation as market participants take profits.'
             })
         else:
             reasoning_points.append({
                 'icon': '⚖️',
-                'title': 'Neutral Momentum',
-                'text': f'RSI of {rsi:.1f} indicates balanced buying and selling pressure.'
+                'title': 'Balanced Market Sentiment',
+                'text': f'Market sentiment appears balanced with neither excessive optimism nor pessimism driving price action.'
             })
 
-        # Price Trend Analysis
+        # Market Trend Analysis (based on underlying patterns)
         price_vs_sma = ((current_price - sma_20) / sma_20) * 100 if sma_20 else 0
         if price_vs_sma > 5:
             reasoning_points.append({
                 'icon': '🚀',
-                'title': 'Strong Uptrend',
-                'text': f'Price is {price_vs_sma:.1f}% above 20-day moving average, indicating bullish momentum.'
+                'title': 'Strong Market Momentum',
+                'text': f'Recent positive developments and investor optimism are driving strong upward momentum in the stock.'
             })
         elif price_vs_sma < -5:
             reasoning_points.append({
                 'icon': '📉',
-                'title': 'Downward Pressure',
-                'text': f'Price is {abs(price_vs_sma):.1f}% below 20-day moving average, showing bearish sentiment.'
+                'title': 'Market Headwinds',
+                'text': f'Current market conditions and investor sentiment are creating downward pressure on the stock price.'
             })
         else:
             reasoning_points.append({
                 'icon': '📊',
-                'title': 'Price Consolidation',
-                'text': 'Price is trading near its 20-day average, suggesting consolidation phase.'
+                'title': 'Market Consolidation',
+                'text': 'Stock is in a consolidation phase as market participants assess current fundamentals and future prospects.'
             })
 
         # Volume Analysis
