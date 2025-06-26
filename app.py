@@ -1029,61 +1029,46 @@ class StockPredictor:
 
         score = 50  # Neutral starting point
 
-        # Technical Analysis Score (proven to work well for BUY signals)
-        # RSI analysis
+        # EXACT REPLICA of original complex model that achieved 84.6% BUY accuracy
+        # RSI analysis (EXACT match)
         if rsi < 30:
-            score += 15  # Oversold - bullish
+            score += 15
         elif rsi > 70:
-            score -= 15  # Overbought - bearish
-        elif 40 <= rsi <= 60:
-            score += 5   # Neutral zone - slightly positive
+            score -= 15
 
-        # Moving average analysis
+        # Moving average analysis (EXACT match)
         if current_price > sma_20 > sma_50:
-            score += 15  # Strong uptrend
-        elif current_price > sma_20:
-            score += 8   # Above short-term MA
+            score += 15
         elif current_price < sma_20 < sma_50:
-            score -= 15  # Strong downtrend
-        elif current_price < sma_20:
-            score -= 8   # Below short-term MA
+            score -= 15
 
-        # Bollinger Bands analysis
-        if bollinger_upper > bollinger_lower:
-            bb_position = (current_price - bollinger_lower) / (bollinger_upper - bollinger_lower)
-            if bb_position < 0.2:
-                score += 10  # Near lower band - oversold
-            elif bb_position > 0.8:
-                score -= 10  # Near upper band - overbought
-            elif 0.4 <= bb_position <= 0.6:
-                score += 3   # Middle range - stable
+        # Bollinger Bands analysis (EXACT match)
+        bb_position = (current_price - bollinger_lower) / (bollinger_upper - bollinger_lower)
+        if bb_position < 0.2:
+            score += 10
+        elif bb_position > 0.8:
+            score -= 10
 
-        # MACD analysis
+        # MACD analysis (EXACT match)
         if macd > 0:
-            score += min(10, abs(macd) * 2)  # Positive MACD
+            score += min(10, abs(macd) * 2)
         else:
-            score -= min(10, abs(macd) * 2)  # Negative MACD
+            score -= min(10, abs(macd) * 2)
 
-        # Price momentum analysis
+        # Price momentum analysis (EXACT match)
         if price_momentum > 5:
-            score += 10  # Strong positive momentum
-        elif price_momentum > 0:
-            score += min(8, price_momentum)  # Moderate positive momentum
+            score += 10
         elif price_momentum < -5:
-            score -= 10  # Strong negative momentum
-        else:
-            score -= min(8, abs(price_momentum))  # Moderate negative momentum
+            score -= 10
 
-        # Volume analysis (critical component)
+        # Volume analysis (EXACT match)
         volume_ratio = volume / avg_volume if avg_volume > 0 else 1
         if volume_ratio > 2:
-            score += 15  # Very high volume
+            score += 15
         elif volume_ratio > 1.5:
-            score += 8   # High volume
-        elif volume_ratio > 1.2:
-            score += 5   # Above average volume
+            score += 8
         elif volume_ratio < 0.5:
-            score -= 10  # Low volume
+            score -= 10
 
         return max(0, min(100, score))
 
@@ -1102,18 +1087,12 @@ class StockPredictor:
         # Enhanced HOLD detection (this was also weak)
         hold_signals = self._detect_consolidation_signals(indicators)
 
-        # Keep the strong BUY logic that worked well (84.6% accuracy)
-        if score >= 75:
-            prediction = "STRONG BUY" if category not in ['penny', 'micro_penny'] else "SPECULATIVE BUY"
-            expected_change = self._calculate_buy_change(score, category)
-            reasoning = "Strong technical signals align for upside potential"
-            confidence = min(85, 60 + (score - 75) * 0.8)
-
-        elif score >= 65:
+        # EXACT BUY logic that achieved 84.6% accuracy
+        if score >= 70:
             prediction = "BUY"
             expected_change = self._calculate_buy_change(score, category)
-            reasoning = "Positive technical indicators suggest upward movement"
-            confidence = min(75, 55 + (score - 65) * 1.0)
+            reasoning = "Technical indicators align for upside potential"
+            confidence = min(75, 50 + (score - 70) * 0.8)
 
         # Enhanced SELL logic (improved from 0% accuracy)
         elif sell_signals['strong_sell'] or score <= 25:
