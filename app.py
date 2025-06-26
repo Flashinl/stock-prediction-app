@@ -1087,49 +1087,49 @@ class StockPredictor:
         # Enhanced HOLD detection (this was also weak)
         hold_signals = self._detect_consolidation_signals(indicators)
 
-        # EXACT BUY logic that achieved 84.6% accuracy
-        if score >= 70:
+        # FIXED BUY logic based on failure analysis
+        if score >= 60:  # LOWERED from 70 - scores 60-69 were wrongly called HOLD but actually went BUY
             prediction = "BUY"
             expected_change = self._calculate_buy_change(score, category)
             reasoning = "Technical indicators align for upside potential"
-            confidence = min(75, 50 + (score - 70) * 0.8)
+            confidence = min(80, 45 + (score - 60) * 1.0)
 
-        # Improved SELL logic based on empirical patterns
-        elif score <= 30:
-            # Very low score = high probability of decline
+        # MUCH MORE CONSERVATIVE SELL logic based on failure analysis
+        elif score <= 20:  # LOWERED from 30 - even score 21 went up 3.4%
             prediction = "SELL"
             expected_change = self._calculate_sell_change(score, category, sell_signals)
-            reasoning = "Multiple negative technical indicators align"
-            confidence = max(50, min(75, 70 - score))
+            reasoning = "Extremely negative technical indicators"
+            confidence = max(50, min(70, 80 - score * 2))
 
-        elif self._detect_high_risk_patterns(indicators, score):
-            # Specific high-risk patterns that often lead to declines
+        elif score <= 25 and self._detect_high_risk_patterns(indicators, score):
+            # Only SELL with very low score AND confirming patterns
             prediction = "SELL"
             expected_change = self._calculate_sell_change(score, category, sell_signals)
-            reasoning = "High-risk pattern detected - potential significant decline"
-            confidence = 60
+            reasoning = "Very low score with high-risk patterns detected"
+            confidence = 65
 
-        elif score <= 45 and self._detect_weakness_patterns(indicators):
-            # Moderate weakness with confirming patterns
-            prediction = "HOLD/SELL"
-            expected_change = self._calculate_sell_change(score, category, sell_signals)
-            reasoning = "Weakness patterns suggest limited upside, potential downside"
-            confidence = 55
-
-        # Improved HOLD logic based on actual sideways movement patterns
-        elif 45 < score < 70 and self._detect_sideways_patterns(indicators):
-            # True consolidation/sideways movement
+        # MUCH TIGHTER HOLD logic - only for truly neutral scores
+        elif 40 <= score <= 59:
+            # Narrow range for true HOLD - avoid scores that lean BUY/SELL
             prediction = "HOLD"
-            expected_change = self._calculate_hold_change(score, category, hold_signals)
-            reasoning = "Consolidation pattern - expect sideways movement"
-            confidence = max(55, min(70, 50 + abs(score - 57.5) * 0.4))
+            expected_change = (score - 50) * 0.15  # Small bias based on score
+            reasoning = "Neutral technical signals suggest sideways movement"
+            confidence = max(45, min(65, 50 + abs(score - 50) * 0.5))
+
+        # Catch remaining cases
+        elif score > 59:
+            # Should not happen due to BUY threshold, but safety net
+            prediction = "BUY"
+            expected_change = self._calculate_buy_change(score, category)
+            reasoning = "Positive technical bias"
+            confidence = 50
 
         else:
-            # Default HOLD for unclear situations
+            # Scores 26-39 - weak but not strong enough for SELL
             prediction = "HOLD"
-            expected_change = (score - 50) * 0.1  # Very small bias
-            reasoning = "Mixed technical signals - neutral outlook"
-            confidence = max(40, min(60, 45 + abs(score - 50) * 0.2))
+            expected_change = (score - 50) * 0.2  # Negative bias
+            reasoning = "Weak technical signals - limited upside expected"
+            confidence = max(40, min(60, 45 + (40 - score) * 0.5))
 
         return prediction, expected_change, reasoning, confidence
 
