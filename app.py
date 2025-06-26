@@ -1233,48 +1233,95 @@ class StockPredictor:
             confidence = min(75, hold_confidence)
             return prediction, expected_change, reasoning, confidence
 
+        # === PENNY STOCK CAUTION CHECK ===
+        if category in ['penny', 'micro_penny']:
+            penny_risk_score = self._evaluate_penny_stock_risks(indicators, score)
+            if penny_risk_score >= 3:  # High risk penny stock
+                prediction = "HOLD"
+                expected_change = self._calculate_enhanced_hold_change(score, category, 2)
+                reasoning = "High-risk penny stock profile suggests caution despite technical signals"
+                confidence = max(45, min(60, score - 10))
+                return prediction, expected_change, reasoning, confidence
+
         # === BALANCED BUY LOGIC (More Selective) ===
         # Exceptional BUY (Score ≥85) - Very high threshold for exceptional cases
         if score >= 85:
-            prediction = "STRONG BUY"
-            expected_change = self._calculate_buy_change(score, category) * 1.3
-            reasoning = "Strong fundamentals align with favorable market conditions"
-            confidence = max(85, min(95, score))
+            # Extra caution for penny stocks even with high scores
+            if category in ['penny', 'micro_penny']:
+                prediction = "BUY"  # Downgrade from STRONG BUY
+                expected_change = self._calculate_buy_change(score, category) * 0.8  # Reduced multiplier
+                reasoning = "Strong technical signals but penny stock risks limit upside confidence"
+                confidence = max(70, min(80, score - 5))
+            else:
+                prediction = "STRONG BUY"
+                expected_change = self._calculate_buy_change(score, category) * 1.3
+                reasoning = "Strong fundamentals align with favorable market conditions"
+                confidence = max(85, min(95, score))
 
         # Strong BUY (Score ≥75) - Original proven threshold
         elif score >= 75:
-            prediction = "STRONG BUY"
-            expected_change = self._calculate_buy_change(score, category) * 1.1
-            reasoning = "Multiple growth catalysts support upside potential"
-            confidence = max(80, min(90, score))
+            if category in ['penny', 'micro_penny']:
+                prediction = "BUY"  # Downgrade from STRONG BUY
+                expected_change = self._calculate_buy_change(score, category) * 0.7
+                reasoning = "Positive technical momentum but penny stock volatility requires caution"
+                confidence = max(65, min(75, score - 5))
+            else:
+                prediction = "STRONG BUY"
+                expected_change = self._calculate_buy_change(score, category) * 1.1
+                reasoning = "Multiple growth catalysts support upside potential"
+                confidence = max(80, min(90, score))
 
         # Regular BUY (Score ≥65) - Proven threshold
         elif score >= 65:
-            prediction = "BUY"
-            expected_change = self._calculate_buy_change(score, category)
-            reasoning = "Solid fundamentals with supportive market trends"
-            confidence = max(75, min(85, score))
+            if category in ['penny', 'micro_penny']:
+                prediction = "SPECULATIVE BUY"  # Downgrade to speculative
+                expected_change = self._calculate_buy_change(score, category) * 0.6
+                reasoning = "Speculative opportunity with high risk/reward profile"
+                confidence = max(55, min(70, score - 10))
+            else:
+                prediction = "BUY"
+                expected_change = self._calculate_buy_change(score, category)
+                reasoning = "Solid fundamentals with supportive market trends"
+                confidence = max(75, min(85, score))
 
         # Moderate BUY (Score ≥58 with strong momentum)
         elif score >= 58 or (price_momentum > 4 and rsi < 70 and volume_ratio > 1.3):
-            prediction = "BUY"
-            expected_change = self._calculate_buy_change(score, category) * 0.85
-            reasoning = "Positive momentum driven by improving market sentiment"
-            confidence = max(65, min(80, score + 5))
+            if category in ['penny', 'micro_penny']:
+                prediction = "HOLD"  # Very conservative for penny stocks
+                expected_change = self._calculate_enhanced_hold_change(score, category, 2)
+                reasoning = "Momentum signals present but penny stock risks outweigh potential gains"
+                confidence = max(45, min(60, score - 5))
+            else:
+                prediction = "BUY"
+                expected_change = self._calculate_buy_change(score, category) * 0.85
+                reasoning = "Positive momentum driven by improving market sentiment"
+                confidence = max(65, min(80, score + 5))
 
         # Speculative BUY (Score ≥52 with specific growth patterns)
         elif (score >= 52 and price_momentum > 3) or (rsi < 35 and price_momentum > -1 and volume_ratio > 1.2):
-            prediction = "SPECULATIVE BUY"
-            expected_change = self._calculate_buy_change(score, category) * 0.7
-            reasoning = "Emerging opportunity with potential for market re-rating"
-            confidence = max(55, min(75, score + 8))
+            if category in ['penny', 'micro_penny']:
+                prediction = "HOLD"  # No speculative buys for penny stocks
+                expected_change = self._calculate_enhanced_hold_change(score, category, 1)
+                reasoning = "Insufficient fundamental strength for penny stock investment recommendation"
+                confidence = max(40, min(55, score))
+            else:
+                prediction = "SPECULATIVE BUY"
+                expected_change = self._calculate_buy_change(score, category) * 0.7
+                reasoning = "Emerging opportunity with potential for market re-rating"
+                confidence = max(55, min(75, score + 8))
 
         # === FALLBACK LOGIC ===
         elif score >= 45:
-            prediction = "BUY"
-            expected_change = self._calculate_buy_change(score, category) * 0.5
-            reasoning = "Market conditions support modest upside potential"
-            confidence = max(55, min(70, score))
+            if category in ['penny', 'micro_penny']:
+                prediction = "HOLD"
+                expected_change = self._calculate_enhanced_hold_change(score, category, 1)
+                reasoning = "Penny stock fundamentals too weak for investment recommendation"
+                confidence = max(35, min(50, score))
+            else:
+                prediction = "BUY"
+                expected_change = self._calculate_buy_change(score, category) * 0.5
+                reasoning = "Market conditions support modest upside potential"
+                confidence = max(55, min(70, score))
 
         else:
             # Weak score but no clear SELL signals
@@ -1284,6 +1331,51 @@ class StockPredictor:
             confidence = max(50, min(65, score + 5))
 
         return prediction, expected_change, reasoning, confidence
+
+    def _evaluate_penny_stock_risks(self, indicators, score):
+        """Evaluate specific risks for penny stocks - debt, growth catalysts, fundamentals"""
+        risk_score = 0
+        current_price = indicators['current_price']
+        volume = indicators.get('volume', 0)
+        avg_volume = indicators.get('avg_volume', volume)
+        price_momentum = indicators.get('price_momentum', 0)
+        rsi = indicators.get('rsi', 50)
+
+        # Risk Factor 1: Extremely low price (under $1)
+        if current_price < 1.0:
+            risk_score += 2  # Major risk
+        elif current_price < 2.0:
+            risk_score += 1  # Moderate risk
+
+        # Risk Factor 2: Poor liquidity (low volume)
+        volume_ratio = volume / avg_volume if avg_volume > 0 else 1
+        if volume_ratio < 0.5:  # Very low volume
+            risk_score += 2
+        elif volume_ratio < 0.8:  # Low volume
+            risk_score += 1
+
+        # Risk Factor 3: Negative momentum trend
+        if price_momentum < -10:  # Severe decline
+            risk_score += 2
+        elif price_momentum < -5:  # Moderate decline
+            risk_score += 1
+
+        # Risk Factor 4: Technical weakness
+        if rsi < 30 and price_momentum < -3:  # Oversold and falling
+            risk_score += 1
+
+        # Risk Factor 5: Very weak fundamental score
+        if score < 35:  # Very poor fundamentals
+            risk_score += 2
+        elif score < 45:  # Poor fundamentals
+            risk_score += 1
+
+        # Risk Factor 6: Lack of growth catalysts (inferred from poor performance)
+        # If price has been declining consistently with low volume, suggests no positive news/catalysts
+        if price_momentum < -8 and volume_ratio < 0.7:
+            risk_score += 1  # No apparent growth catalysts
+
+        return risk_score
 
     def _detect_high_risk_patterns(self, indicators, score):
         """Detect specific patterns that often lead to significant declines"""
@@ -1649,11 +1741,11 @@ class StockPredictor:
         }
 
     def _calculate_buy_change(self, score, category):
-        """Calculate expected change for BUY predictions (balanced approach)"""
+        """Calculate expected change for BUY predictions (conservative for penny stocks)"""
         if category in ['penny', 'micro_penny']:
-            # Moderate range for penny stocks
-            base_change = 8 + (score - 65) * 0.5  # 8-28% range (slightly increased from original)
-            return max(8, min(28, base_change))
+            # More conservative range for penny stocks due to high risk
+            base_change = 5 + (score - 65) * 0.3  # 5-18% range (reduced from 8-28%)
+            return max(5, min(18, base_change))
         elif category in ['micro_cap', 'small_cap']:
             # Moderate range for small caps
             base_change = 6 + (score - 65) * 0.35  # 6-18% range (slightly increased)
