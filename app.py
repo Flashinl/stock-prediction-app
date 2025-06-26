@@ -581,10 +581,15 @@ class StockPredictor:
     def _convert_timeframe_option(self, option):
         """Convert frontend timeframe option to display string"""
         timeframe_map = {
+            '1_month': '1 month',
             '1month': '1 month',
+            '3_months': '3 months',
             '3months': '3 months',
+            '6_months': '6 months',
             '6months': '6 months',
+            '1_year': '1 year',
             '1year': '1 year',
+            '2_years': '2 years',
             '2years': '2 years'
         }
         return timeframe_map.get(option, '3 months')
@@ -725,24 +730,31 @@ class StockPredictor:
     def predict_stock_movement(self, symbol, timeframe_override=None):
         """Main prediction function with optional timeframe override"""
         try:
+            logger.info(f"Starting prediction for {symbol}")
+
             # Get stock data
             data, info = self.get_stock_data(symbol)
+            logger.info(f"Stock data fetched: data={data is not None}, info={info is not None}")
             if data is None:
                 return {"error": "Unable to fetch stock data"}
-            
+
             # Calculate technical indicators
             indicators = self.calculate_technical_indicators(data)
+            logger.info(f"Technical indicators calculated: {indicators is not None}")
             if not indicators:
                 return {"error": "Insufficient data for analysis"}
             
             # Create or get stock record
             symbol = symbol.upper().strip()
+            logger.info(f"Looking for stock record for {symbol}")
             stock_record = Stock.query.filter_by(symbol=symbol).first()
+            logger.info(f"Stock record found: {stock_record is not None}")
 
             if not stock_record:
                 # Create stock record from yfinance data
                 current_price = indicators['current_price']
                 market_cap = info.get('marketCap')
+                logger.info(f"yfinance info for {symbol}: marketCap={market_cap}, longName={info.get('longName')}")
 
                 stock_record = Stock(
                     symbol=symbol,
@@ -768,11 +780,33 @@ class StockPredictor:
                     db.session.rollback()
                     logger.warning(f"Could not add stock to database: {e}")
                     # Continue with analysis even if database save fails
+
+                # Verify stock_record was created successfully
+                if stock_record is None:
+                    logger.error(f"Failed to create stock record for {symbol}")
+                    return {"error": f"Unable to create stock record for {symbol}"}
             else:
                 # Update existing record with fresh data
                 stock_record.current_price = indicators['current_price']
                 stock_record.volume = indicators.get('volume', stock_record.volume)
                 stock_record.last_updated = datetime.utcnow()
+
+                # Update market cap if it's missing or 0
+                if not stock_record.market_cap or stock_record.market_cap == 0:
+                    market_cap = info.get('marketCap')
+                    if market_cap:
+                        stock_record.market_cap = market_cap
+                        logger.info(f"Updated market cap for {symbol}: {market_cap}")
+
+                # Update industry if it's missing or Unknown
+                if not stock_record.industry or stock_record.industry == 'Unknown':
+                    industry = info.get('industry')
+                    if industry:
+                        stock_record.industry = industry
+                        logger.info(f"Updated industry for {symbol}: {industry}")
+                    else:
+                        logger.info(f"No industry data available for {symbol} in yfinance")
+
                 try:
                     db.session.commit()
                 except Exception as e:
@@ -780,50 +814,73 @@ class StockPredictor:
                     logger.warning(f"Could not update stock in database: {e}")
 
             # Get stock data for analysis
+            if stock_record is None:
+                logger.error(f"Stock record is None for symbol {symbol}")
+                return {"error": f"Unable to access stock record for {symbol}"}
+
             stock_data = stock_record.to_dict()
             stock_data.update({
                 'current_price': indicators['current_price'],
-                'volume': indicators.get('volume', stock_record.volume),
-                'avg_volume': stock_record.volume  # Use historical average
+                'volume': indicators.get('volume', stock_record.volume or 0),
+                'avg_volume': stock_record.volume or 0  # Use historical average
             })
 
             # Calculate confidence and timeframe
+            logger.info("Calculating confidence and timeframe")
             confidence, auto_timeframe = self.calculate_confidence_and_timeframe(stock_data, indicators)
+            logger.info(f"Confidence: {confidence}, timeframe: {auto_timeframe}")
 
             # Use manual timeframe override if provided, otherwise use AI recommendation
             if timeframe_override and timeframe_override != 'auto':
                 timeframe = self._convert_timeframe_option(timeframe_override)
             else:
                 timeframe = auto_timeframe
+            logger.info(f"Final timeframe: {timeframe}")
 
             # Enhanced prediction logic based on stock category
+            logger.info("Getting stock category")
             category = self.get_stock_category(stock_data)
-            prediction_result = self._generate_prediction(stock_data, indicators, category, confidence)
+            logger.info(f"Stock category: {category}")
+
+            logger.info("Generating prediction")
+            prediction_result = self._generate_prediction(stock_data, indicators, category, confidence, timeframe)
+            logger.info(f"Prediction result: {prediction_result}")
 
             # Add risk warnings for penny stocks
+            logger.info("Generating risk warnings")
             risk_warnings = self._generate_risk_warnings(stock_data, category)
+            logger.info(f"Risk warnings: {risk_warnings}")
 
             # Generate chart data
+            logger.info("Generating chart data")
             chart_data = self._generate_chart_data(data, indicators, prediction_result)
+            logger.info(f"Chart data generated: {chart_data is not None}")
 
             # Generate enhanced AI reasoning
+            logger.info("Generating enhanced reasoning")
             enhanced_reasoning = self._generate_enhanced_reasoning(stock_data, indicators, category, prediction_result, confidence)
+            logger.info(f"Enhanced reasoning generated: {enhanced_reasoning is not None}")
+
+            # Ensure stock_record is not None
+            if stock_record is None:
+                logger.error(f"Stock record is None for symbol {symbol}")
+                return {"error": f"Unable to create stock record for {symbol}"}
 
             return {
                 "symbol": symbol.upper(),
-                "company_name": stock_record.name,
-                "exchange": stock_record.exchange,
-                "sector": stock_record.sector,
-                "industry": stock_record.industry,
-                "market_cap": stock_record.market_cap,
-                "current_price": round(indicators['current_price'], 4),
+                "company_name": stock_record.name or symbol,
+                "exchange": stock_record.exchange or "Unknown",
+                "sector": stock_record.sector or "Unknown",
+                "industry": stock_record.industry or "Unknown",
+                "market_cap": stock_record.market_cap or 0,
+                "current_price": round(indicators['current_price'], 2),
                 "prediction": prediction_result['prediction'],
                 "expected_change_percent": round(prediction_result['expected_change'], 2),
-                "target_price": round(prediction_result['target_price'], 4),
+                "target_price": round(prediction_result['target_price'], 2),
                 "confidence": round(confidence * 100, 1),
                 "timeframe": timeframe,
                 "stock_category": category,
-                "is_penny_stock": stock_record.is_penny_stock,
+                "is_penny_stock": stock_record.is_penny_stock if stock_record.is_penny_stock is not None else False,
                 "technical_indicators": indicators,
                 "risk_warnings": risk_warnings,
                 "analysis_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -838,13 +895,18 @@ class StockPredictor:
             logger.error(f"Error in prediction for {symbol}: {e}")
             return {"error": f"Prediction failed: {str(e)}"}
 
-    def _generate_prediction(self, stock_data, indicators, category, confidence):
-        """Generate prediction based on stock category and technical analysis"""
+    def _generate_prediction(self, stock_data, indicators, category, confidence, timeframe):
+        """Generate prediction based on stock category, technical analysis, and timeframe"""
         current_price = indicators['current_price']
         sma_20 = indicators.get('sma_20', current_price)
         rsi = indicators.get('rsi', 50)
         volume = stock_data.get('volume', 0)
         avg_volume = stock_data.get('avg_volume', volume)
+
+        # Create deterministic seed based on stock symbol and current data
+        symbol = stock_data.get('symbol', 'UNKNOWN')
+        seed_value = hash(symbol + str(int(current_price * 100)) + str(int(rsi))) % 2147483647
+        np.random.seed(seed_value)
 
         # Basic trend analysis
         price_trend = (current_price - sma_20) / sma_20 * 100 if sma_20 else 0
@@ -904,14 +966,34 @@ class StockPredictor:
                 expected_change = np.random.uniform(-3, 3)
                 reasoning = "Large cap in consolidation - stable outlook"
 
-        target_price = current_price * (1 + expected_change / 100)
+        # Scale expected change based on timeframe
+        timeframe_multiplier = self._get_timeframe_multiplier(timeframe)
+        scaled_expected_change = expected_change * timeframe_multiplier
+
+        target_price = current_price * (1 + scaled_expected_change / 100)
 
         return {
             'prediction': prediction,
-            'expected_change': expected_change,
+            'expected_change': scaled_expected_change,
             'target_price': target_price,
             'reasoning': reasoning
         }
+
+    def _get_timeframe_multiplier(self, timeframe):
+        """Get multiplier for expected change based on timeframe"""
+        # Extract approximate months from timeframe string
+        timeframe_lower = timeframe.lower()
+
+        if "1-2 month" in timeframe_lower or "1 month" in timeframe_lower:
+            return 0.5  # 50% of base prediction for 1 month
+        elif "2-6 month" in timeframe_lower or "3 month" in timeframe_lower:
+            return 1.0  # Base prediction for 3 months
+        elif "6-12 month" in timeframe_lower or "6 month" in timeframe_lower:
+            return 1.5  # 150% for 6+ months
+        elif "1-3 year" in timeframe_lower or "year" in timeframe_lower:
+            return 2.0  # 200% for 1+ years
+        else:
+            return 1.0  # Default to base prediction
 
     def _generate_risk_warnings(self, stock_data, category):
         """Generate appropriate risk warnings based on stock characteristics"""
@@ -968,7 +1050,9 @@ class StockPredictor:
                 # Gradual progression towards target price with some volatility
                 progress = i / prediction_days
 
-                # Add some realistic volatility
+                # Add some realistic volatility using deterministic seed
+                volatility_seed = hash(f"{current_price}_{i}_{target_price}") % 2147483647
+                np.random.seed(volatility_seed)
                 volatility = np.random.normal(0, 0.02)  # 2% daily volatility
 
                 # Calculate predicted price with smooth progression
@@ -1211,6 +1295,7 @@ class StockPredictor:
             'geopolitical_factors': self._get_geopolitical_context(),
             'news_sentiment': self._get_news_sentiment_context(symbol, sector)
         }
+        return context
 
     def _get_current_market_environment(self):
         """Current market environment analysis (December 2024)"""
@@ -1693,6 +1778,67 @@ def register():
         logger.error(f"Registration error: {e}")
         return jsonify({"error": "Registration failed. Please try again."}), 500
 
+@app.route('/api/auth/register-dev', methods=['POST'])
+def register_dev():
+    """Create a development account that bypasses email verification"""
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+
+        # Basic validation
+        if not name or len(name) < 2:
+            return jsonify({"error": "Name must be at least 2 characters long"}), 400
+
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+
+        if not password or len(password) < 6:
+            return jsonify({"error": "Password must be at least 6 characters long"}), 400
+
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            return jsonify({"error": "An account with this email already exists"}), 400
+
+        # Create new user with email already verified
+        user = User(name=name, email=email, is_verified=True)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        logger.info(f"Development account created for {email}")
+
+        return jsonify({
+            "status": "success",
+            "message": "Development account created successfully! You can now log in.",
+            "user_id": user.id,
+            "email": email,
+            "name": name
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Dev registration error: {e}")
+        return jsonify({"error": "Development account creation failed. Please try again."}), 500
+
+@app.route('/api/auth/dev-info', methods=['GET'])
+def dev_info():
+    """Get development account information"""
+    return jsonify({
+        "dev_account": {
+            "email": "dev@stockprediction.com",
+            "password": "devpass123",
+            "name": "Developer",
+            "note": "This account is pre-verified and ready to use for development/testing"
+        },
+        "endpoints": {
+            "register_dev": "/api/auth/register-dev",
+            "login": "/api/auth/login"
+        }
+    })
+
 @app.route('/api/auth/verify', methods=['POST'])
 def verify_email():
     """Verify email with code"""
@@ -2087,10 +2233,34 @@ def initialize_stock_database():
     except Exception as e:
         logger.error(f"Error initializing stock database: {e}")
 
+def initialize_dev_account():
+    """Create a default development account for testing"""
+    try:
+        dev_email = "dev@stockprediction.com"
+        existing_dev = User.query.filter_by(email=dev_email).first()
+
+        if not existing_dev:
+            dev_user = User(
+                name="Developer",
+                email=dev_email,
+                is_verified=True  # Skip email verification for dev account
+            )
+            dev_user.set_password("devpass123")  # Simple password for development
+            db.session.add(dev_user)
+            db.session.commit()
+            logger.info("Development account created: dev@stockprediction.com / devpass123")
+        else:
+            logger.info("Development account already exists")
+
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error creating development account: {e}")
+
 # Initialize database
 with app.app_context():
     db.create_all()
     initialize_stock_database()
+    initialize_dev_account()
 
 if __name__ == '__main__':
     import os

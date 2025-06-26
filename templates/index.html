@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockAI Pro - Advanced Stock Prediction Platform</title>
+    <title>StockTrek - AI Stock Analysis Platform</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -721,42 +721,94 @@
             box-shadow: 0 10px 20px rgba(0, 255, 136, 0.3);
         }
 
-        /* Tab Navigation Styles */
-        .tab-navigation {
+        /* Sidebar Layout */
+        .app-container {
             display: flex;
-            justify-content: center;
-            margin-bottom: 40px;
-            background: rgba(0, 0, 0, 0.6);
-            border-radius: 15px;
-            padding: 8px;
-            border: 1px solid rgba(0, 255, 136, 0.2);
+            min-height: 100vh;
         }
 
-        .tab-btn {
-            background: transparent;
-            border: none;
-            color: #888;
-            padding: 15px 30px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 1rem;
-            font-weight: 600;
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(135deg, #001122 0%, #003344 100%) !important;
+            border-right: 3px solid #00ff88 !important;
+            padding: 20px 0;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            height: 100vh !important;
+            overflow-y: auto;
+            z-index: 9999 !important;
+            backdrop-filter: blur(10px);
+            box-shadow: 2px 0 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .sidebar-header {
+            padding: 0 20px 30px 20px;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .sidebar-header h2 {
+            color: #00ff88;
+            font-size: 1.5rem;
+            margin: 0;
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin: 0 5px;
+            gap: 10px;
         }
 
-        .tab-btn:hover {
-            color: #00ff88;
+        .sidebar-nav {
+            padding: 0 10px;
+        }
+
+        .nav-item {
+            background: transparent;
+            color: #cccccc;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+
+        .nav-item:hover {
             background: rgba(0, 255, 136, 0.1);
+            color: #00ff88;
+            transform: translateX(5px);
         }
 
-        .tab-btn.active {
-            background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
-            color: #000;
-            box-shadow: 0 5px 15px rgba(0, 255, 136, 0.3);
+        .nav-item.active {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            border-left: 4px solid #00ff88;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .main-content {
+            margin-left: 250px !important;
+            flex: 1;
+            padding: 20px;
+            min-height: 100vh;
+            width: calc(100% - 250px) !important;
+            background: transparent;
+        }
+
+        /* Hide any old tab navigation */
+        .tab-navigation {
+            display: none !important;
         }
 
         .tab-content {
@@ -1222,8 +1274,8 @@
         <!-- Landing Page Content -->
         <div id="landingPage">
             <div class="header">
-                <h1><i class="fas fa-robot"></i> StockAI Pro</h1>
-                <p>Advanced Neural Network Stock Prediction Platform</p>
+                <h1><i class="fas fa-chart-line"></i> StockTrek</h1>
+                <p>AI-Powered Stock Analysis & Market Intelligence</p>
             </div>
 
             <div class="hero-section">
@@ -1321,23 +1373,27 @@
 
         <!-- Main Application (Hidden by default) -->
         <div id="mainApp" style="display: none;">
-            <div class="header">
-                <h1><i class="fas fa-robot"></i> StockAI Pro</h1>
-                <p>Advanced Neural Network Stock Prediction Platform</p>
-            </div>
+            <div class="app-container">
+                <!-- Sidebar Navigation -->
+                <div class="sidebar">
+                    <div class="sidebar-header">
+                        <h2><i class="fas fa-chart-line"></i> StockTrek</h2>
+                    </div>
+                    <div class="sidebar-nav">
+                        <button class="nav-item active" onclick="switchTab('dashboard')">
+                            <i class="fas fa-chart-pie"></i> Dashboard
+                        </button>
+                        <button class="nav-item" onclick="switchTab('analysis')">
+                            <i class="fas fa-search"></i> Analysis
+                        </button>
+                        <button class="nav-item" onclick="switchTab('watchlist')">
+                            <i class="fas fa-star"></i> Watchlist
+                        </button>
+                    </div>
+                </div>
 
-            <!-- Tab Navigation -->
-            <div class="tab-navigation">
-                <button class="tab-btn active" onclick="switchTab('dashboard')">
-                    <i class="fas fa-chart-pie"></i> Dashboard
-                </button>
-                <button class="tab-btn" onclick="switchTab('analysis')">
-                    <i class="fas fa-search"></i> Analysis
-                </button>
-                <button class="tab-btn" onclick="switchTab('watchlist')">
-                    <i class="fas fa-star"></i> Watchlist
-                </button>
-            </div>
+                <!-- Main Content Area -->
+                <div class="main-content">
 
             <!-- Dashboard Tab -->
             <div id="dashboardTab" class="tab-content active">
@@ -1439,6 +1495,8 @@
                     </div>
                 </div>
             </div>
+                </div> <!-- End main-content -->
+            </div> <!-- End app-container -->
         </div>
 
         <!-- Authentication Modals -->
@@ -1519,16 +1577,14 @@
             </div>
         </div>
 
-        <div class="disclaimer">
-            <i class="fas fa-shield-alt"></i>
-            <strong>Risk Warning:</strong> This platform uses advanced AI for educational analysis only.
-            Market predictions involve substantial risk. Never invest more than you can afford to lose.
-        </div>
+
     </div>
 
     <script>
-        // Initialize elements after DOM is loaded
+        // Initialize global variables first to prevent reference errors
         let stockInput, predictBtn, loading, results, error, stockDropdown;
+        let watchlist = JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
+        let availableStocks = [];
 
         function initializeElements() {
             stockInput = document.getElementById('stockSymbol');
@@ -1639,11 +1695,7 @@
             showMainApp();
         }
 
-        // Watchlist Management - Initialize early to prevent errors
-        let watchlist = JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
-
-        // Stock database for dropdown suggestions
-        let availableStocks = [];
+        // Watchlist and stock data are now initialized at the top of the script
 
         function openModal(type) {
             document.getElementById(type + 'Modal').style.display = 'block';
@@ -2419,7 +2471,7 @@
                     </div>
                 </div>
 
-                ${generateRiskWarnings(data)}
+
 
                 <div class="ai-reasoning-section">
                     <h3><i class="fas fa-brain"></i> AI Market Analysis & Reasoning</h3>
@@ -2544,11 +2596,11 @@
 
         // Tab Management
         function switchTab(tabName) {
-            // Remove active class from all tabs and content
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            // Remove active class from all navigation items and content
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-            // Add active class to selected tab and content
+            // Add active class to selected navigation item and content
             event.target.classList.add('active');
             document.getElementById(tabName + 'Tab').classList.add('active');
 
@@ -2653,6 +2705,17 @@
 
         // Featured Opportunities (smart algorithm for best growth + safety)
         async function generateFeaturedOpportunities() {
+            console.log('Generating featured opportunities...');
+
+            // Show loading state
+            const grid = document.getElementById('featuredGrid');
+            grid.innerHTML = `
+                <div style="text-align: center; color: #888; padding: 40px;">
+                    <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                    <p>Loading featured opportunities...</p>
+                </div>
+            `;
+
             // Comprehensive list of quality stocks across different categories
             const stockCandidates = [
                 // Large Cap Tech (High Growth Potential)
@@ -2675,8 +2738,9 @@
 
             try {
                 // Analyze a broader set of stocks to find the best opportunities
-                for (const symbol of stockCandidates.slice(0, 20)) { // Analyze top 20 candidates
+                for (const symbol of stockCandidates.slice(0, 8)) { // Reduce to 8 for faster loading
                     try {
+                        console.log(`Fetching prediction for ${symbol}...`);
                         const response = await fetch('/api/predict', {
                             method: 'POST',
                             headers: {
@@ -2690,10 +2754,12 @@
 
                         if (response.ok) {
                             const prediction = await response.json();
-                            if (!prediction.error && prediction.expected_change_percent > 0) {
+                            console.log(`Prediction for ${symbol}:`, prediction);
+
+                            if (!prediction.error && prediction.expected_change_percent > 0 && prediction.confidence >= 70) {
                                 const safetyScore = calculateSafetyScore(prediction);
                                 const growthScore = calculateGrowthScore(prediction);
-                                const overallScore = (safetyScore * 0.6) + (growthScore * 0.4); // Weight safety higher
+                                const overallScore = (safetyScore * 0.5) + (growthScore * 0.5); // Equal weight for growth and safety
 
                                 candidates.push({
                                     symbol: prediction.symbol,
@@ -2714,17 +2780,25 @@
                                     },
                                     reasoning: generateOpportunityReasoning(prediction)
                                 });
+                                console.log(`Added ${symbol} to candidates`);
+                            } else {
+                                console.log(`Skipped ${symbol}: error or negative change`);
                             }
+                        } else {
+                            console.error(`API error for ${symbol}:`, response.status, response.statusText);
                         }
                     } catch (error) {
                         console.error(`Error fetching data for ${symbol}:`, error);
                     }
                 }
 
-                // Sort by overall score (safety + growth) and take top 4
-                candidates.sort((a, b) => b.analysis.overallScore - a.analysis.overallScore);
-                const topOpportunities = candidates.slice(0, 4);
+                console.log(`Total candidates found: ${candidates.length}`);
 
+                // Sort by overall score (safety + growth) and take top 6
+                candidates.sort((a, b) => b.analysis.overallScore - a.analysis.overallScore);
+                const topOpportunities = candidates.slice(0, 6);
+
+                console.log('Top opportunities:', topOpportunities);
                 displayFeaturedOpportunities(topOpportunities);
             } catch (error) {
                 console.error('Error generating featured opportunities:', error);
@@ -2735,37 +2809,45 @@
         function calculateSafetyScore(prediction) {
             let score = 0;
 
-            // Market cap safety (larger = safer)
-            if (prediction.market_cap > 100000000000) score += 30; // >$100B
-            else if (prediction.market_cap > 10000000000) score += 20; // >$10B
-            else if (prediction.market_cap > 1000000000) score += 10; // >$1B
+            // Confidence level (higher weight for confidence)
+            score += prediction.confidence * 0.6; // Max 60 points
 
-            // Confidence level
-            score += prediction.confidence * 0.4; // Max 40 points
+            // Market cap safety (larger = safer)
+            if (prediction.market_cap > 200000000000) score += 25; // >$200B (large cap)
+            else if (prediction.market_cap > 10000000000) score += 20; // >$10B (mid cap)
+            else if (prediction.market_cap > 2000000000) score += 15; // >$2B (small cap)
+            else score -= 10; // Penalty for micro caps
 
             // Sector safety
-            const safeSectors = ['Technology', 'Healthcare', 'Consumer Staples', 'Utilities'];
+            const safeSectors = ['Technology', 'Healthcare', 'Consumer Staples', 'Utilities', 'Financials'];
             if (safeSectors.includes(prediction.sector)) score += 15;
 
-            // Avoid penny stocks
-            if (!prediction.is_penny_stock) score += 15;
+            // Avoid penny stocks (strong penalty)
+            if (!prediction.is_penny_stock) score += 20;
+            else score -= 30;
 
-            return Math.min(score, 100);
+            return Math.max(Math.min(score, 100), 0);
         }
 
         function calculateGrowthScore(prediction) {
             let score = 0;
 
-            // Expected growth (capped to avoid unrealistic scores)
-            const cappedGrowth = Math.min(prediction.expected_change_percent, 50);
-            score += cappedGrowth * 1.5; // Max 75 points for 50% growth
+            // Expected growth (prioritize realistic but strong growth)
+            const growth = prediction.expected_change_percent;
+            if (growth > 20) score += 60; // Excellent growth
+            else if (growth > 15) score += 50; // Very good growth
+            else if (growth > 10) score += 40; // Good growth
+            else if (growth > 5) score += 25; // Moderate growth
+            else if (growth > 0) score += 10; // Minimal growth
 
-            // Growth sectors bonus
-            const growthSectors = ['Technology', 'Healthcare', 'Consumer Discretionary'];
-            if (growthSectors.includes(prediction.sector)) score += 15;
+            // High-growth sectors bonus
+            const growthSectors = ['Technology', 'Healthcare', 'Energy', 'Consumer Discretionary', 'Communication Services'];
+            if (growthSectors.includes(prediction.sector)) score += 20;
 
-            // Buy signal bonus
-            if (prediction.prediction.includes('BUY')) score += 10;
+            // Prediction strength bonus
+            if (prediction.prediction.includes('STRONG BUY')) score += 20;
+            else if (prediction.prediction.includes('BUY')) score += 15;
+            else if (prediction.prediction.includes('HOLD')) score += 5;
 
             return Math.min(score, 100);
         }
@@ -2809,33 +2891,45 @@
         function displayFeaturedOpportunities(featured) {
             const grid = document.getElementById('featuredGrid');
 
+            if (!grid) {
+                console.error('Featured grid element not found');
+                return;
+            }
+
             if (featured.length === 0) {
                 grid.innerHTML = `
                     <div style="text-align: center; color: #888; padding: 40px;">
                         <i class="fas fa-chart-line" style="font-size: 2rem; margin-bottom: 10px;"></i>
-                        <p>Loading featured opportunities...</p>
+                        <p>No opportunities found at this time. Please try again later.</p>
                     </div>
                 `;
                 return;
             }
 
-            grid.innerHTML = featured.map(item => {
-                const changeClass = item.analysis.upside > 0 ? 'positive' : 'negative';
-                const changeSign = item.analysis.upside > 0 ? '+' : '';
+            console.log('Displaying featured opportunities:', featured);
 
-                return `
-                    <div class="featured-card" onclick="analyzeFeatured('${item.symbol}')">
-                        <div class="featured-header">
-                            <div class="featured-symbol">${item.symbol}</div>
-                            <div class="featured-upside ${changeClass}">${changeSign}${item.analysis.upside.toFixed(1)}%</div>
+            grid.innerHTML = featured.map(item => {
+                try {
+                    const changeClass = item.analysis.upside > 0 ? 'positive' : 'negative';
+                    const changeSign = item.analysis.upside > 0 ? '+' : '';
+
+                    return `
+                        <div class="featured-card" onclick="analyzeFeatured('${item.symbol}')">
+                            <div class="featured-header">
+                                <div class="featured-symbol">${item.symbol}</div>
+                                <div class="featured-upside ${changeClass}">${changeSign}${item.analysis.upside.toFixed(1)}%</div>
+                            </div>
+                            <div class="featured-company">${item.data.name || item.symbol}</div>
+                            <div class="featured-price">$${(item.data.price || 0).toFixed(2)}</div>
+                            <div class="featured-prediction">${item.analysis.prediction || 'N/A'}</div>
+                            <div class="featured-timeframe">${item.analysis.timeframe || 'N/A'}</div>
+                            <div class="featured-reason">${item.reasoning || 'AI-identified opportunity'}</div>
                         </div>
-                        <div class="featured-company">${item.data.name}</div>
-                        <div class="featured-price">$${item.data.price.toFixed(2)}</div>
-                        <div class="featured-prediction">${item.analysis.prediction}</div>
-                        <div class="featured-timeframe">${item.analysis.timeframe}</div>
-                        <div class="featured-reason">${item.reasoning}</div>
-                    </div>
-                `;
+                    `;
+                } catch (error) {
+                    console.error('Error rendering featured opportunity:', item, error);
+                    return '';
+                }
             }).join('');
         }
 
@@ -2862,36 +2956,7 @@
 
 
 
-        function generateRiskWarnings(data) {
-            // Use the new risk_warnings array from backend
-            const warnings = data.risk_warnings || [];
 
-            if (warnings.length === 0) {
-                return '';
-            }
-
-            let warningHtml = `
-                <div class="risk-warning-section">
-                    <h4><i class="fas fa-exclamation-triangle"></i> Risk Assessment</h4>
-                    <div class="risk-warnings">
-            `;
-
-            warnings.forEach(warning => {
-                warningHtml += `<div class="risk-warning">${warning}</div>`;
-            });
-
-            warningHtml += `
-                    </div>
-                    <div class="risk-disclaimer">
-                        <strong>Disclaimer:</strong> These predictions are AI-generated estimates and should not be considered financial advice.
-                        ${data.is_penny_stock ? 'Penny stocks are extremely high-risk investments. ' : ''}
-                        Always do your own research and consider consulting a financial advisor.
-                    </div>
-                </div>
-            `;
-
-            return warningHtml;
-        }
 
         function generateAIReasoning(data) {
             // Use the enhanced reasoning provided by the backend if available
