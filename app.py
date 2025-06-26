@@ -977,23 +977,8 @@ class StockPredictor:
         bollinger_upper = indicators.get('bollinger_upper', current_price * 1.05)
         bollinger_lower = indicators.get('bollinger_lower', current_price * 0.95)
 
-        # Calculate comprehensive technical scores
-        technical_score = self._calculate_technical_score(indicators)
-        momentum_score = self._calculate_momentum_score(indicators)
-        volume_score = self._calculate_volume_score(indicators)
-        trend_score = self._calculate_trend_score(indicators)
-
-        # Combine scores with category-specific weights
-        category_weights = self._get_category_weights(category)
-        overall_score = (
-            technical_score * category_weights['technical'] +
-            momentum_score * category_weights['momentum'] +
-            volume_score * category_weights['volume'] +
-            trend_score * category_weights['trend']
-        )
-
-        # Generate prediction based on overall score
-        prediction, expected_change, reasoning = self._score_to_prediction(overall_score, category, indicators)
+        # Simplified prediction based on what actually works
+        prediction, expected_change, reasoning, confidence_level = self._generate_realistic_prediction(indicators, category)
 
         # Scale expected change based on timeframe
         timeframe_multiplier = self._get_timeframe_multiplier(timeframe)
@@ -1008,232 +993,243 @@ class StockPredictor:
             'reasoning': reasoning
         }
 
-    def _calculate_technical_score(self, indicators):
-        """Calculate technical analysis score (0-100)"""
+    def _generate_realistic_prediction(self, indicators, category):
+        """Generate prediction based on what actually works: Volume + Momentum + Outlier Detection"""
         current_price = indicators['current_price']
-        sma_20 = indicators.get('sma_20', current_price)
-        sma_50 = indicators.get('sma_50', current_price)
-        rsi = indicators.get('rsi', 50)
-        bollinger_upper = indicators.get('bollinger_upper', current_price * 1.05)
-        bollinger_lower = indicators.get('bollinger_lower', current_price * 0.95)
-
-        score = 50  # Neutral starting point
-
-        # RSI analysis (30 points)
-        if rsi < 30:
-            score += 15  # Oversold - bullish
-        elif rsi > 70:
-            score -= 15  # Overbought - bearish
-        elif 40 <= rsi <= 60:
-            score += 5   # Neutral zone - slightly positive
-
-        # Moving average analysis (25 points)
-        if current_price > sma_20 > sma_50:
-            score += 15  # Strong uptrend
-        elif current_price > sma_20:
-            score += 8   # Above short-term MA
-        elif current_price < sma_20 < sma_50:
-            score -= 15  # Strong downtrend
-        elif current_price < sma_20:
-            score -= 8   # Below short-term MA
-
-        # Bollinger Bands analysis (15 points)
-        bb_position = (current_price - bollinger_lower) / (bollinger_upper - bollinger_lower)
-        if bb_position < 0.2:
-            score += 10  # Near lower band - oversold
-        elif bb_position > 0.8:
-            score -= 10  # Near upper band - overbought
-        elif 0.4 <= bb_position <= 0.6:
-            score += 3   # Middle range - stable
-
-        return max(0, min(100, score))
-
-    def _calculate_momentum_score(self, indicators):
-        """Calculate momentum score (0-100)"""
-        macd = indicators.get('macd', 0)
-        price_momentum = indicators.get('price_momentum', 0)
-
-        score = 50  # Neutral starting point
-
-        # MACD analysis (40 points)
-        if macd > 0:
-            score += min(20, abs(macd) * 2)  # Positive MACD
-        else:
-            score -= min(20, abs(macd) * 2)  # Negative MACD
-
-        # Price momentum analysis (40 points)
-        if price_momentum > 5:
-            score += 20  # Strong positive momentum
-        elif price_momentum > 0:
-            score += min(15, price_momentum * 3)  # Moderate positive momentum
-        elif price_momentum < -5:
-            score -= 20  # Strong negative momentum
-        else:
-            score -= min(15, abs(price_momentum) * 3)  # Moderate negative momentum
-
-        return max(0, min(100, score))
-
-    def _calculate_volume_score(self, indicators):
-        """Calculate volume score (0-100)"""
         volume = indicators.get('volume', 0)
         avg_volume = indicators.get('avg_volume', volume)
-        volume_trend = indicators.get('volume_trend', 0)
-
-        score = 50  # Neutral starting point
-
-        # Volume ratio analysis (50 points)
-        volume_ratio = volume / avg_volume if avg_volume > 0 else 1
-        if volume_ratio > 2:
-            score += 25  # Very high volume
-        elif volume_ratio > 1.5:
-            score += 15  # High volume
-        elif volume_ratio > 1.2:
-            score += 8   # Above average volume
-        elif volume_ratio < 0.5:
-            score -= 15  # Low volume
-
-        # Volume trend analysis (30 points)
-        if volume_trend > 20:
-            score += 15  # Strong increasing volume
-        elif volume_trend > 0:
-            score += min(10, volume_trend / 2)  # Increasing volume
-        elif volume_trend < -20:
-            score -= 15  # Strong decreasing volume
-        else:
-            score -= min(10, abs(volume_trend) / 2)  # Decreasing volume
-
-        return max(0, min(100, score))
-
-    def _calculate_trend_score(self, indicators):
-        """Calculate trend strength score (0-100)"""
-        current_price = indicators['current_price']
+        price_momentum = indicators.get('price_momentum', 0)
         sma_20 = indicators.get('sma_20', current_price)
-        trend_strength = indicators.get('trend_strength', 2.0)
 
-        score = 50  # Neutral starting point
+        # Primary factors that actually work
+        volume_signal = self._analyze_volume_signal(volume, avg_volume)
+        momentum_signal = self._analyze_momentum_signal(price_momentum, current_price, sma_20)
+        outlier_detected = self._detect_outlier_conditions(indicators)
 
-        # Price vs SMA trend (50 points)
-        price_vs_sma = (current_price - sma_20) / sma_20 * 100 if sma_20 > 0 else 0
-        if price_vs_sma > 5:
-            score += 25  # Strong uptrend
-        elif price_vs_sma > 2:
-            score += 15  # Moderate uptrend
-        elif price_vs_sma > 0:
-            score += 8   # Weak uptrend
-        elif price_vs_sma < -5:
-            score -= 25  # Strong downtrend
-        elif price_vs_sma < -2:
-            score -= 15  # Moderate downtrend
+        # Combine signals for final prediction
+        return self._combine_signals_to_prediction(volume_signal, momentum_signal, outlier_detected, category)
+
+    def _analyze_volume_signal(self, volume, avg_volume):
+        """Volume analysis - most reliable factor"""
+        if avg_volume == 0:
+            return {'strength': 0, 'direction': 'neutral', 'confidence': 30}
+
+        volume_ratio = volume / avg_volume
+
+        if volume_ratio > 3.0:
+            # Very high volume - strong signal
+            return {'strength': 3, 'direction': 'bullish', 'confidence': 75}
+        elif volume_ratio > 2.0:
+            # High volume - good signal
+            return {'strength': 2, 'direction': 'bullish', 'confidence': 65}
+        elif volume_ratio > 1.5:
+            # Above average volume - moderate signal
+            return {'strength': 1, 'direction': 'bullish', 'confidence': 55}
+        elif volume_ratio < 0.5:
+            # Low volume - weak/bearish signal
+            return {'strength': -1, 'direction': 'bearish', 'confidence': 50}
         else:
-            score -= 8   # Weak downtrend
+            # Normal volume - neutral
+            return {'strength': 0, 'direction': 'neutral', 'confidence': 45}
 
-        # Trend strength (volatility-adjusted) (30 points)
-        if trend_strength < 1.5:
-            score += 15  # Low volatility - strong trend
-        elif trend_strength < 3:
-            score += 8   # Moderate volatility
-        elif trend_strength > 5:
-            score -= 15  # High volatility - weak trend
+    def _analyze_momentum_signal(self, price_momentum, current_price, sma_20):
+        """Momentum analysis - second most reliable"""
+        # Price momentum (10-day rate of change)
+        momentum_strength = 0
+        confidence = 45
 
-        return max(0, min(100, score))
+        if price_momentum > 10:
+            momentum_strength = 2  # Strong positive momentum
+            confidence = 65
+        elif price_momentum > 5:
+            momentum_strength = 1  # Moderate positive momentum
+            confidence = 55
+        elif price_momentum < -10:
+            momentum_strength = -2  # Strong negative momentum
+            confidence = 65
+        elif price_momentum < -5:
+            momentum_strength = -1  # Moderate negative momentum
+            confidence = 55
 
-    def _get_category_weights(self, category):
-        """Get scoring weights based on stock category"""
-        if category in ['penny', 'micro_penny']:
-            return {
-                'technical': 0.2,  # Less reliable for penny stocks
-                'momentum': 0.3,   # Important for volatility
-                'volume': 0.4,     # Critical for penny stocks
-                'trend': 0.1       # Less reliable
-            }
-        elif category in ['micro_cap', 'small_cap']:
-            return {
-                'technical': 0.3,
-                'momentum': 0.3,
-                'volume': 0.25,
-                'trend': 0.15
-            }
-        else:  # Large/mid caps
-            return {
-                'technical': 0.4,  # More reliable for large caps
-                'momentum': 0.25,
-                'volume': 0.15,
-                'trend': 0.2
-            }
+        # Trend confirmation with moving average
+        trend_aligned = False
+        if sma_20 > 0:
+            price_vs_ma = (current_price - sma_20) / sma_20 * 100
+            if (momentum_strength > 0 and price_vs_ma > 2) or (momentum_strength < 0 and price_vs_ma < -2):
+                trend_aligned = True
+                confidence += 10  # Boost confidence when momentum and trend align
 
-    def _score_to_prediction(self, overall_score, category, indicators):
-        """Convert overall score to prediction, expected change, and reasoning"""
-        # Adjust score ranges based on category
-        if category in ['penny', 'micro_penny']:
-            # More conservative thresholds for penny stocks
-            if overall_score >= 75:
+        direction = 'bullish' if momentum_strength > 0 else 'bearish' if momentum_strength < 0 else 'neutral'
+
+        return {
+            'strength': momentum_strength,
+            'direction': direction,
+            'confidence': min(75, confidence),
+            'trend_aligned': trend_aligned
+        }
+
+    def _detect_outlier_conditions(self, indicators):
+        """Detect when technical analysis is likely to fail"""
+        volume = indicators.get('volume', 0)
+        avg_volume = indicators.get('avg_volume', volume)
+        price_momentum = indicators.get('price_momentum', 0)
+
+        outlier_flags = []
+
+        # Volume spike outlier (3x+ average volume)
+        if avg_volume > 0 and volume / avg_volume > 3:
+            outlier_flags.append('volume_spike')
+
+        # Extreme momentum outlier (>20% move in 10 days)
+        if abs(price_momentum) > 20:
+            outlier_flags.append('extreme_momentum')
+
+        # Gap detection would go here if we had intraday data
+        # For now, we'll use extreme momentum as a proxy
+
+        return {
+            'detected': len(outlier_flags) > 0,
+            'flags': outlier_flags,
+            'severity': len(outlier_flags)
+        }
+
+    def _combine_signals_to_prediction(self, volume_signal, momentum_signal, outlier_detected, category):
+        """Combine volume and momentum signals into final prediction with honest confidence levels"""
+
+        # Handle outlier conditions first
+        if outlier_detected['detected']:
+            return self._handle_outlier_prediction(volume_signal, momentum_signal, outlier_detected, category)
+
+        # Calculate combined signal strength
+        volume_strength = volume_signal['strength']
+        momentum_strength = momentum_signal['strength']
+
+        # Volume is weighted more heavily (it's more reliable)
+        combined_strength = (volume_strength * 0.6) + (momentum_strength * 0.4)
+
+        # Calculate realistic confidence (most predictions are 50-65% at best)
+        base_confidence = (volume_signal['confidence'] + momentum_signal['confidence']) / 2
+
+        # Boost confidence when signals align
+        if (volume_strength > 0 and momentum_strength > 0) or (volume_strength < 0 and momentum_strength < 0):
+            base_confidence += 10  # Aligned signals
+        elif volume_strength != 0 and momentum_strength != 0 and volume_strength * momentum_strength < 0:
+            base_confidence -= 15  # Conflicting signals
+
+        # Trend alignment bonus
+        if momentum_signal.get('trend_aligned', False):
+            base_confidence += 5
+
+        # Cap confidence at realistic levels
+        final_confidence = max(35, min(70, base_confidence))
+
+        # Generate prediction based on combined strength
+        if combined_strength >= 1.5:
+            prediction = "STRONG BUY" if category not in ['penny', 'micro_penny'] else "SPECULATIVE BUY"
+            expected_change = self._calculate_realistic_change(combined_strength, category, 'strong_bullish')
+            reasoning = self._generate_realistic_reasoning(volume_signal, momentum_signal, 'strong_bullish')
+        elif combined_strength >= 0.5:
+            prediction = "BUY"
+            expected_change = self._calculate_realistic_change(combined_strength, category, 'bullish')
+            reasoning = self._generate_realistic_reasoning(volume_signal, momentum_signal, 'bullish')
+        elif combined_strength <= -1.5:
+            prediction = "SELL"
+            expected_change = self._calculate_realistic_change(combined_strength, category, 'strong_bearish')
+            reasoning = self._generate_realistic_reasoning(volume_signal, momentum_signal, 'strong_bearish')
+        elif combined_strength <= -0.5:
+            prediction = "HOLD/SELL"
+            expected_change = self._calculate_realistic_change(combined_strength, category, 'bearish')
+            reasoning = self._generate_realistic_reasoning(volume_signal, momentum_signal, 'bearish')
+        else:
+            prediction = "HOLD"
+            expected_change = self._calculate_realistic_change(combined_strength, category, 'neutral')
+            reasoning = self._generate_realistic_reasoning(volume_signal, momentum_signal, 'neutral')
+
+        return prediction, expected_change, reasoning, final_confidence
+
+    def _handle_outlier_prediction(self, volume_signal, momentum_signal, outlier_detected, category):
+        """Handle predictions when outlier conditions are detected"""
+        outlier_flags = outlier_detected['flags']
+
+        if 'volume_spike' in outlier_flags and 'extreme_momentum' in outlier_flags:
+            # Major event detected - technical analysis less reliable
+            if momentum_signal['strength'] > 0:
                 prediction = "SPECULATIVE BUY"
-                expected_change = 15 + (overall_score - 75) * 0.8  # 15-35%
-                reasoning = "Strong technical signals with high volume support"
-            elif overall_score >= 60:
-                prediction = "BUY"
-                expected_change = 8 + (overall_score - 60) * 0.5   # 8-15%
-                reasoning = "Positive momentum with volume confirmation"
-            elif overall_score <= 25:
-                prediction = "SELL"
-                expected_change = -25 + (overall_score - 25) * 0.6  # -25% to 0%
-                reasoning = "Weak technicals suggest continued decline"
-            elif overall_score <= 40:
-                prediction = "HOLD/AVOID"
-                expected_change = -5 + (overall_score - 40) * 0.3   # -5% to 0%
-                reasoning = "Mixed signals - high volatility expected"
+                expected_change = 15 + (momentum_signal['strength'] * 10)  # Higher volatility
+                reasoning = "Major volume spike with extreme momentum - potential breakout but high risk"
+                confidence = 45  # Lower confidence due to outlier
             else:
-                prediction = "HOLD"
-                expected_change = (overall_score - 50) * 0.2        # -2% to +2%
-                reasoning = "Consolidating with unclear direction"
+                prediction = "AVOID/SELL"
+                expected_change = -15 + (momentum_signal['strength'] * 5)
+                reasoning = "Major volume spike with negative momentum - potential breakdown"
+                confidence = 50
+        elif 'volume_spike' in outlier_flags:
+            # High volume event
+            prediction = "SPECULATIVE BUY" if volume_signal['strength'] > 0 else "HOLD"
+            expected_change = 8 + (volume_signal['strength'] * 5)
+            reasoning = "Unusual volume activity detected - potential catalyst event"
+            confidence = 55
+        else:
+            # Extreme momentum without volume confirmation
+            prediction = "HOLD"
+            expected_change = momentum_signal['strength'] * 3  # Reduced confidence
+            reasoning = "Extreme price movement without volume confirmation - proceed with caution"
+            confidence = 40
 
-        elif category in ['micro_cap', 'small_cap']:
-            # Moderate thresholds for small caps
-            if overall_score >= 70:
-                prediction = "STRONG BUY"
-                expected_change = 12 + (overall_score - 70) * 0.4   # 12-24%
-                reasoning = "Strong technical setup with momentum"
-            elif overall_score >= 60:
-                prediction = "BUY"
-                expected_change = 6 + (overall_score - 60) * 0.6    # 6-12%
-                reasoning = "Positive technical indicators align"
-            elif overall_score <= 30:
-                prediction = "SELL"
-                expected_change = -15 + (overall_score - 30) * 0.5  # -15% to 0%
-                reasoning = "Technical breakdown with volume confirmation"
-            elif overall_score <= 45:
-                prediction = "HOLD"
-                expected_change = -3 + (overall_score - 45) * 0.2   # -3% to 0%
-                reasoning = "Weak momentum suggests caution"
-            else:
-                prediction = "HOLD/BUY"
-                expected_change = (overall_score - 50) * 0.25       # -1.25% to +2.5%
-                reasoning = "Neutral to positive technical outlook"
+        return prediction, expected_change, reasoning, confidence
 
-        else:  # Large/mid caps
-            # Conservative thresholds for large caps
-            if overall_score >= 75:
-                prediction = "STRONG BUY"
-                expected_change = 8 + (overall_score - 75) * 0.3    # 8-15.5%
-                reasoning = "Excellent technical setup with institutional support"
-            elif overall_score >= 65:
-                prediction = "BUY"
-                expected_change = 4 + (overall_score - 65) * 0.4    # 4-8%
-                reasoning = "Strong technical indicators suggest upside"
-            elif overall_score <= 25:
-                prediction = "SELL"
-                expected_change = -10 + (overall_score - 25) * 0.4  # -10% to 0%
-                reasoning = "Technical deterioration suggests downside"
-            elif overall_score <= 40:
-                prediction = "HOLD"
-                expected_change = -2 + (overall_score - 40) * 0.15  # -2% to 0%
-                reasoning = "Weak technicals suggest limited upside"
-            else:
-                prediction = "HOLD/BUY"
-                expected_change = (overall_score - 50) * 0.2        # -2% to +2%
-                reasoning = "Stable technical outlook with modest upside"
+    def _calculate_realistic_change(self, combined_strength, category, signal_type):
+        """Calculate realistic expected change based on category and signal strength"""
+        base_ranges = {
+            'penny': {'strong_bullish': (15, 35), 'bullish': (8, 20), 'neutral': (-5, 5), 'bearish': (-15, -5), 'strong_bearish': (-30, -15)},
+            'micro_penny': {'strong_bullish': (12, 30), 'bullish': (6, 15), 'neutral': (-3, 3), 'bearish': (-12, -3), 'strong_bearish': (-25, -12)},
+            'small_cap': {'strong_bullish': (10, 20), 'bullish': (5, 12), 'neutral': (-2, 2), 'bearish': (-8, -2), 'strong_bearish': (-15, -8)},
+            'large_cap': {'strong_bullish': (6, 12), 'bullish': (3, 8), 'neutral': (-1, 1), 'bearish': (-5, -1), 'strong_bearish': (-10, -5)}
+        }
 
-        return prediction, expected_change, reasoning
+        # Default to small_cap if category not found
+        category_key = category if category in base_ranges else 'small_cap'
+        range_min, range_max = base_ranges[category_key][signal_type]
+
+        # Adjust based on signal strength
+        strength_factor = abs(combined_strength) / 2.0  # Normalize
+        if signal_type in ['strong_bullish', 'bullish']:
+            return range_min + (range_max - range_min) * strength_factor
+        elif signal_type in ['strong_bearish', 'bearish']:
+            return range_max + (range_min - range_max) * strength_factor
+        else:  # neutral
+            return combined_strength * 2  # Small movement based on slight bias
+
+    def _generate_realistic_reasoning(self, volume_signal, momentum_signal, signal_type):
+        """Generate honest reasoning based on actual signals"""
+        volume_desc = {
+            3: "very high volume",
+            2: "high volume",
+            1: "above-average volume",
+            0: "normal volume",
+            -1: "low volume"
+        }.get(volume_signal['strength'], "unusual volume")
+
+        momentum_desc = {
+            2: "strong positive momentum",
+            1: "positive momentum",
+            0: "neutral momentum",
+            -1: "negative momentum",
+            -2: "strong negative momentum"
+        }.get(momentum_signal['strength'], "mixed momentum")
+
+        if signal_type == 'strong_bullish':
+            return f"Strong bullish signals: {volume_desc} confirms {momentum_desc}"
+        elif signal_type == 'bullish':
+            return f"Positive signals: {momentum_desc} with {volume_desc} support"
+        elif signal_type == 'strong_bearish':
+            return f"Strong bearish signals: {volume_desc} confirms {momentum_desc}"
+        elif signal_type == 'bearish':
+            return f"Negative signals: {momentum_desc} with {volume_desc}"
+        else:
+            return f"Mixed signals: {momentum_desc} and {volume_desc} - direction unclear"
+
+
 
     def _get_timeframe_multiplier(self, timeframe):
         """Get multiplier for expected change based on timeframe"""
