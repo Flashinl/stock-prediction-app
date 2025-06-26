@@ -314,6 +314,28 @@
             100% { transform: rotate(360deg); }
         }
 
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
         .results {
             display: none;
             padding: 40px;
@@ -2741,7 +2763,7 @@
                     </div>
 
                     <div style="text-align: center; margin-top: 25px;">
-                        <button class="predict-btn" onclick="addToWatchlist('${data.symbol}', stockDatabase['${data.symbol}'], ${JSON.stringify(data).replace(/"/g, '&quot;')})">
+                        <button class="predict-btn" onclick="addToWatchlist('${data.symbol}', stockDatabase['${data.symbol}'] || {name: '${data.symbol}', price: ${data.technical_indicators?.current_price || 0}}, ${JSON.stringify(data).replace(/"/g, '&quot;')})">
                             <i class="fas fa-star"></i> Add to Watchlist
                         </button>
                     </div>
@@ -2826,24 +2848,89 @@
             }
         }
 
+        // Utility Functions
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                <span>${message}</span>
+            `;
+
+            // Add styles
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#00ff88' : type === 'error' ? '#ff4444' : '#0088ff'};
+                color: #000;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                animation: slideIn 0.3s ease-out;
+            `;
+
+            // Add to page
+            document.body.appendChild(notification);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
         // Watchlist Management Functions
         function addToWatchlist(symbol, data, prediction) {
-            const existingIndex = watchlist.findIndex(item => item.symbol === symbol);
-            const watchlistItem = {
-                symbol,
-                data,
-                prediction,
-                addedDate: new Date().toISOString()
-            };
+            try {
+                // Ensure we have valid data
+                if (!symbol) {
+                    console.error('Cannot add to watchlist: symbol is required');
+                    return;
+                }
 
-            if (existingIndex >= 0) {
-                watchlist[existingIndex] = watchlistItem;
-            } else {
-                watchlist.push(watchlistItem);
+                // Provide fallback data if not available
+                const stockData = data || {
+                    name: symbol,
+                    price: prediction?.technical_indicators?.current_price || 0
+                };
+
+                const existingIndex = watchlist.findIndex(item => item.symbol === symbol);
+                const watchlistItem = {
+                    symbol,
+                    data: stockData,
+                    prediction,
+                    addedDate: new Date().toISOString()
+                };
+
+                if (existingIndex >= 0) {
+                    watchlist[existingIndex] = watchlistItem;
+                    console.log(`Updated ${symbol} in watchlist`);
+                } else {
+                    watchlist.push(watchlistItem);
+                    console.log(`Added ${symbol} to watchlist`);
+                }
+
+                localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
+                updateWatchlistCount();
+
+                // Show success feedback
+                showNotification(`${symbol} added to watchlist!`, 'success');
+
+            } catch (error) {
+                console.error('Error adding to watchlist:', error);
+                showNotification('Failed to add to watchlist', 'error');
             }
-
-            localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
-            updateWatchlistCount();
         }
 
         function removeFromWatchlist(symbol) {
