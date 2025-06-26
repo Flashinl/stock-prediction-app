@@ -2915,9 +2915,9 @@
 
         function loadSP500Data() {
             console.log('Loading S&P 500 data...');
-            // Realistic S&P 500 data simulation
+            // Realistic S&P 500 data simulation with consistent values
             const baseValue = 4750;
-            const change = (Math.random() - 0.4) * 60; // Slight bias toward positive
+            const change = (seededRandom(12345) - 0.4) * 60; // Slight bias toward positive, consistent seed
             const currentValue = baseValue + change;
             const changePercent = (change / baseValue * 100).toFixed(2);
             const changeClass = change >= 0 ? 'positive' : 'negative';
@@ -2934,13 +2934,13 @@
                 } else {
                     console.error('sp500Value element not found');
                 }
-            }, 100); // Reduced timeout
+            }, 10); // Much faster loading
         }
 
         function loadVIXData() {
             console.log('Loading VIX data...');
-            // Realistic VIX data simulation
-            const vixValue = (Math.random() * 25 + 12).toFixed(1); // Random between 12-37
+            // Realistic VIX data simulation with consistent values
+            const vixValue = (seededRandom(23456) * 25 + 12).toFixed(1); // Consistent between 12-37
             let vixLabel = 'Low Fear';
             let vixClass = 'positive';
 
@@ -2963,13 +2963,13 @@
                 } else {
                     console.error('vixValue element not found');
                 }
-            }, 200); // Reduced timeout
+            }, 20); // Much faster loading
         }
 
         function loadActiveSignals() {
             console.log('Loading active signals...');
-            // Count active opportunities based on actual strong signals
-            const signalCount = Math.floor(Math.random() * 12 + 8); // Random between 8-20
+            // Count active opportunities based on actual strong signals with consistent values
+            const signalCount = Math.floor(seededRandom(34567) * 12 + 8); // Consistent between 8-20
 
             setTimeout(() => {
                 const element = document.getElementById('activeSignals');
@@ -2982,19 +2982,19 @@
                 } else {
                     console.error('activeSignals element not found');
                 }
-            }, 300); // Reduced timeout
+            }, 30); // Much faster loading
         }
 
         function loadMarketSentiment() {
             console.log('Loading market sentiment...');
-            // Realistic market sentiment with bias toward positive
+            // Realistic market sentiment with bias toward positive and consistent values
             const sentiments = [
                 { label: 'Bullish', class: 'positive', emoji: '🐂', weight: 0.5 },
                 { label: 'Cautious', class: 'neutral', emoji: '⚖️', weight: 0.3 },
                 { label: 'Bearish', class: 'negative', emoji: '🐻', weight: 0.2 }
             ];
 
-            const rand = Math.random();
+            const rand = seededRandom(45678); // Use consistent seed
             let sentiment;
             if (rand < 0.5) sentiment = sentiments[0]; // Bullish
             else if (rand < 0.8) sentiment = sentiments[1]; // Cautious
@@ -3011,12 +3011,12 @@
                 } else {
                     console.error('marketSentiment element not found');
                 }
-            }, 400); // Reduced timeout
+            }, 40); // Much faster loading
         }
 
         function loadTopSector() {
             console.log('Loading top sector...');
-            // Realistic sector performance
+            // Realistic sector performance with consistent values
             const sectors = [
                 { name: 'Technology', change: '+2.8%' },
                 { name: 'AI & Robotics', change: '+4.2%' },
@@ -3025,7 +3025,7 @@
                 { name: 'Fintech', change: '+1.9%' }
             ];
 
-            const topSector = sectors[Math.floor(Math.random() * sectors.length)];
+            const topSector = sectors[Math.floor(seededRandom(56789) * sectors.length)]; // Use consistent seed
 
             setTimeout(() => {
                 const element = document.getElementById('topSector');
@@ -3038,13 +3038,13 @@
                 } else {
                     console.error('topSector element not found');
                 }
-            }, 500); // Reduced timeout
+            }, 50); // Much faster loading
         }
 
         function loadAIConfidence() {
             console.log('Loading AI confidence...');
-            // More realistic AI confidence level (reduced from overly high values)
-            const confidence = Math.floor(Math.random() * 20 + 65); // Random between 65-85 (more realistic)
+            // More realistic AI confidence level with consistent values
+            const confidence = Math.floor(seededRandom(67890) * 20 + 65); // Consistent between 65-85 (more realistic)
             let confidenceLabel = 'High';
             let confidenceClass = 'positive';
 
@@ -3067,7 +3067,7 @@
                 } else {
                     console.error('aiConfidence element not found');
                 }
-            }, 600); // Reduced timeout
+            }, 60); // Much faster loading
         }
 
         // Featured Opportunities (smart algorithm for best growth + safety)

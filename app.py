@@ -1788,6 +1788,60 @@ class StockPredictor:
             'reasoning': reasoning
         }
 
+    def _detect_strong_sell_signals(self, indicators):
+        """Detect strong sell signals for improved SELL accuracy"""
+        current_price = indicators['current_price']
+        sma_20 = indicators.get('sma_20', current_price)
+        sma_50 = indicators.get('sma_50', current_price)
+        rsi = indicators.get('rsi', 50)
+        price_momentum = indicators.get('price_momentum', 0)
+        volume = indicators.get('volume', 0)
+        avg_volume = indicators.get('avg_volume', volume)
+
+        sell_signals = 0
+        confidence = 45
+        reasoning = "Bearish technical outlook"
+
+        # Strong negative momentum
+        if price_momentum < -3:
+            sell_signals += 2
+            confidence += 15
+            reasoning = "Strong negative price momentum"
+        elif price_momentum < -1.5:
+            sell_signals += 1
+            confidence += 8
+
+        # Price below key moving averages
+        if current_price < sma_20 < sma_50:
+            sell_signals += 2
+            confidence += 12
+            reasoning = "Price below declining moving averages"
+        elif current_price < sma_20:
+            sell_signals += 1
+            confidence += 6
+
+        # RSI showing weakness but not oversold
+        if 25 < rsi < 40:
+            sell_signals += 1
+            confidence += 8
+            reasoning = "RSI showing weakness"
+
+        # High volume on decline
+        volume_ratio = volume / avg_volume if avg_volume > 0 else 1
+        if volume_ratio > 1.3 and price_momentum < -2:
+            sell_signals += 2
+            confidence += 10
+            reasoning = "High volume selling pressure"
+
+        strong_sell = sell_signals >= 4
+
+        return {
+            'strong_sell': strong_sell,
+            'confidence': min(75, confidence),
+            'reasoning': reasoning,
+            'signal_count': sell_signals
+        }
+
     def _calculate_buy_change(self, score, category):
         """Calculate expected change for BUY predictions (keep the logic that worked)"""
         if category in ['penny', 'micro_penny']:
