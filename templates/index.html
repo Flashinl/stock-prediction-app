@@ -2924,6 +2924,11 @@
                 localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
                 updateWatchlistCount();
 
+                // Refresh watchlist display if currently viewing it
+                if (document.querySelector('.tab-btn.active')?.textContent.includes('Watchlist')) {
+                    loadWatchlist();
+                }
+
                 // Show success feedback
                 showNotification(`${symbol} added to watchlist!`, 'success');
 
@@ -2978,16 +2983,16 @@
                             <div class="watchlist-metrics">
                                 <div class="watchlist-metric">
                                     <div class="watchlist-metric-label">Current Price</div>
-                                    <div class="watchlist-metric-value">$${item.data.price}</div>
+                                    <div class="watchlist-metric-value">$${(item.data?.price || item.prediction?.current_price || 0).toFixed(2)}</div>
                                 </div>
                                 <div class="watchlist-metric">
                                     <div class="watchlist-metric-label">Target Price</div>
-                                    <div class="watchlist-metric-value">$${item.prediction.target_price}</div>
+                                    <div class="watchlist-metric-value">$${(item.prediction?.target_price || 0).toFixed(2)}</div>
                                 </div>
                             </div>
                             <div class="watchlist-prediction">
                                 <div class="watchlist-prediction-label">AI Prediction</div>
-                                <div class="watchlist-prediction-value">${item.prediction.prediction} (${item.prediction.expected_change_percent > 0 ? '+' : ''}${item.prediction.expected_change_percent}%)</div>
+                                <div class="watchlist-prediction-value">${item.prediction?.prediction || 'N/A'} (${(item.prediction?.expected_change || item.prediction?.expected_change_percent || 0) > 0 ? '+' : ''}${(item.prediction?.expected_change || item.prediction?.expected_change_percent || 0).toFixed(1)}%)</div>
                             </div>
                             <div class="watchlist-actions">
                                 <button class="watchlist-analyze-btn" onclick="analyzeWatchlistStock('${item.symbol}')">
@@ -3224,9 +3229,12 @@
             const candidates = [];
 
             try {
-                // Analyze more stocks for better growth opportunities
-                for (let i = 0; i < Math.min(15, stockCandidates.length); i++) { // Increased to 15 stocks for better selection
-                    const symbol = stockCandidates[i];
+                // Analyze fewer stocks concurrently for faster loading
+                const selectedStocks = stockCandidates.slice(0, 8); // Reduced from 15 to 8 for faster loading
+                console.log(`Analyzing ${selectedStocks.length} stocks concurrently...`);
+
+                // Make concurrent API calls instead of sequential
+                const promises = selectedStocks.map(async (symbol) => {
                     try {
                         console.log(`Fetching prediction for ${symbol}...`);
                         const response = await fetch('/api/predict', {
@@ -3243,51 +3251,56 @@
                         if (response.ok) {
                             const prediction = await response.json();
                             console.log(`Prediction for ${symbol}:`, prediction);
-
-                            // Balanced filtering for quality growth opportunities
-                            if (!prediction.error &&
-                                prediction.expected_change_percent >= 6 && // Meaningful growth threshold
-                                prediction.confidence >= 60 && // Reasonable confidence requirement
-                                (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG'))) { // Remove SPECULATIVE from main filter
-                                const safetyScore = calculateSafetyScore(prediction);
-                                const growthScore = calculateGrowthScore(prediction);
-                                const hiddenGemScore = calculateHiddenGemScore(prediction);
-                                const overallScore = (safetyScore * 0.25) + (growthScore * 0.55) + (hiddenGemScore * 0.2); // Balanced weighting
-
-                                candidates.push({
-                                    symbol: prediction.symbol,
-                                    data: {
-                                        name: prediction.company_name,
-                                        price: prediction.current_price,
-                                        sector: prediction.sector,
-                                        marketCap: prediction.market_cap
-                                    },
-                                    analysis: {
-                                        upside: prediction.expected_change_percent,
-                                        confidence: prediction.confidence,
-                                        prediction: prediction.prediction,
-                                        timeframe: prediction.timeframe,
-                                        safetyScore: safetyScore,
-                                        growthScore: growthScore,
-                                        hiddenGemScore: hiddenGemScore,
-                                        overallScore: overallScore
-                                    },
-                                    reasoning: generateOpportunityReasoning(prediction)
-                                });
-                                console.log(`Added ${symbol} to candidates`);
-                            } else {
-                                console.log(`Skipped ${symbol}: error or negative change`);
-                            }
-                        } else {
-                            console.error(`API error for ${symbol}:`, response.status, response.statusText);
+                            return { symbol, prediction };
                         }
                     } catch (error) {
-                        console.error(`Error fetching data for ${symbol}:`, error);
+                        console.error(`Error fetching ${symbol}:`, error);
                     }
+                    return null;
+                });
 
-                    // Add delay between requests to prevent server overload
-                    if (i < Math.min(7, stockCandidates.length - 1)) {
-                        await new Promise(resolve => setTimeout(resolve, 200)); // 200ms delay
+                // Wait for all predictions to complete
+                const results = await Promise.all(promises);
+
+                // Process results
+                for (const result of results) {
+                    if (result && result.prediction) {
+                        const { symbol, prediction } = result;
+
+                        // Balanced filtering for quality growth opportunities
+                        if (!prediction.error &&
+                            prediction.expected_change_percent >= 6 && // Meaningful growth threshold
+                            prediction.confidence >= 60 && // Reasonable confidence requirement
+                            (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG'))) { // Remove SPECULATIVE from main filter
+                            const safetyScore = calculateSafetyScore(prediction);
+                            const growthScore = calculateGrowthScore(prediction);
+                            const hiddenGemScore = calculateHiddenGemScore(prediction);
+                            const overallScore = (safetyScore * 0.25) + (growthScore * 0.55) + (hiddenGemScore * 0.2); // Balanced weighting
+
+                            candidates.push({
+                                symbol: prediction.symbol,
+                                data: {
+                                    name: prediction.company_name,
+                                    price: prediction.current_price,
+                                    sector: prediction.sector,
+                                    marketCap: prediction.market_cap
+                                },
+                                analysis: {
+                                    upside: prediction.expected_change_percent,
+                                    confidence: prediction.confidence,
+                                    prediction: prediction.prediction,
+                                    timeframe: prediction.timeframe,
+                                    safetyScore: safetyScore,
+                                    growthScore: growthScore,
+                                    hiddenGemScore: hiddenGemScore,
+                                    overallScore: overallScore
+                                },
+                                reasoning: generateOpportunityReasoning(prediction)
+                            });
+                            console.log(`Added ${symbol} to candidates`);
+                        } else {
+                            console.log(`Skipped ${symbol}: error or negative change`);
+                        }
                     }
                 }
 
