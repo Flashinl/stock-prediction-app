@@ -13,6 +13,55 @@
             box-sizing: border-box;
         }
 
+        /* Smooth animations and transitions */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200px 0;
+            }
+            100% {
+                background-position: calc(200px + 100%) 0;
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .animate-slide-in {
+            animation: slideInLeft 0.6s ease-out;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0a0a0a 100%);
@@ -551,7 +600,7 @@
             font-size: 1.2rem;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             gap: 12px;
@@ -559,22 +608,50 @@
             letter-spacing: 1px;
             min-width: 200px;
             justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+            transition: left 0.6s ease;
+        }
+
+        .cta-btn:hover::before {
+            left: 100%;
         }
 
         .cta-btn.primary {
             background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
             color: #000;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
         }
 
         .cta-btn.secondary {
             background: transparent;
             color: #00ff88;
             border: 2px solid #00ff88;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
         }
 
         .cta-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(0, 255, 136, 0.4);
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(0, 255, 136, 0.4);
+        }
+
+        .cta-btn.primary:hover {
+            box-shadow: 0 20px 40px rgba(0, 255, 136, 0.5);
+        }
+
+        .cta-btn:active {
+            transform: translateY(-2px) scale(1.02);
+            transition: all 0.1s ease;
         }
 
         .section-title {
@@ -728,82 +805,134 @@
         }
 
         .sidebar {
-            width: 250px;
-            background: linear-gradient(135deg, #001122 0%, #003344 100%) !important;
-            border-right: 3px solid #00ff88 !important;
-            padding: 20px 0;
+            width: 280px;
+            background: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 50%, #0f1419 100%) !important;
+            border-right: 2px solid #00ff88 !important;
+            padding: 0;
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             height: 100vh !important;
             overflow-y: auto;
             z-index: 9999 !important;
-            backdrop-filter: blur(10px);
-            box-shadow: 2px 0 15px rgba(0, 255, 136, 0.3);
+            backdrop-filter: blur(15px);
+            box-shadow: 4px 0 25px rgba(0, 255, 136, 0.15), inset -1px 0 0 rgba(0, 255, 136, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .sidebar-header {
-            padding: 0 20px 30px 20px;
-            border-bottom: 1px solid rgba(0, 255, 136, 0.2);
-            margin-bottom: 20px;
+            padding: 25px 20px 25px 20px;
+            border-bottom: 1px solid rgba(0, 255, 136, 0.3);
+            margin-bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, rgba(0, 255, 136, 0.02) 100%);
+            position: relative;
+        }
+
+        .sidebar-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20px;
+            right: 20px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, #00ff88 50%, transparent 100%);
         }
 
         .sidebar-header h2 {
             color: #00ff88;
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             margin: 0;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .sidebar-header h2 i {
+            font-size: 1.4rem;
+            filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.5));
         }
 
         .sidebar-nav {
-            padding: 0 10px;
+            padding: 20px 15px;
         }
 
         .nav-item {
             background: transparent;
-            color: #cccccc;
+            color: #999;
             border: none;
-            padding: 15px 20px;
+            padding: 16px 20px;
             border-radius: 12px;
             cursor: pointer;
             font-size: 1rem;
             font-weight: 500;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             text-align: left;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 136, 0.1) 50%, transparent 100%);
+            transition: left 0.5s ease;
+        }
+
+        .nav-item:hover::before {
+            left: 100%;
         }
 
         .nav-item:hover {
-            background: rgba(0, 255, 136, 0.1);
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.15) 0%, rgba(0, 255, 136, 0.05) 100%);
             color: #00ff88;
-            transform: translateX(5px);
+            transform: translateX(8px);
+            box-shadow: 0 4px 20px rgba(0, 255, 136, 0.1);
         }
 
         .nav-item.active {
-            background: rgba(0, 255, 136, 0.2);
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.25) 0%, rgba(0, 255, 136, 0.1) 100%);
             color: #00ff88;
             border-left: 4px solid #00ff88;
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+            box-shadow: 0 6px 25px rgba(0, 255, 136, 0.2);
+            transform: translateX(4px);
+        }
+
+        .nav-item.active::before {
+            display: none;
         }
 
         .nav-item i {
-            width: 20px;
+            width: 22px;
             text-align: center;
+            transition: all 0.3s ease;
+            filter: drop-shadow(0 0 4px rgba(0, 255, 136, 0.3));
+        }
+
+        .nav-item:hover i,
+        .nav-item.active i {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.6));
         }
 
         .main-content {
-            margin-left: 250px !important;
+            margin-left: 280px !important;
             flex: 1;
             padding: 20px;
             min-height: 100vh;
-            width: calc(100% - 250px) !important;
+            width: calc(100% - 280px) !important;
             background: transparent;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         /* Hide any old tab navigation */
@@ -848,20 +977,38 @@
         }
 
         .stat-card {
-            background: rgba(0, 0, 0, 0.6);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(10, 10, 10, 0.6) 100%);
             border: 2px solid rgba(0, 255, 136, 0.2);
             border-radius: 20px;
             padding: 30px;
             display: flex;
             align-items: center;
             gap: 20px;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 136, 0.1) 50%, transparent 100%);
+            transition: left 0.6s ease;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
         }
 
         .stat-card:hover {
             border-color: #00ff88;
-            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
-            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 255, 136, 0.25), 0 5px 15px rgba(0, 255, 136, 0.1);
+            transform: translateY(-8px) scale(1.02);
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, rgba(0, 0, 0, 0.8) 100%);
         }
 
         .stat-icon {
@@ -901,18 +1048,42 @@
         }
 
         .featured-card {
-            background: rgba(0, 0, 0, 0.6);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(15, 15, 15, 0.6) 100%);
             border: 2px solid rgba(0, 255, 136, 0.2);
-            border-radius: 15px;
+            border-radius: 18px;
             padding: 25px;
-            transition: all 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .featured-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, rgba(0, 255, 136, 0.08) 50%, transparent 100%);
+            transition: left 0.6s ease;
+        }
+
+        .featured-card:hover::before {
+            left: 100%;
         }
 
         .featured-card:hover {
             border-color: #00ff88;
-            box-shadow: 0 10px 25px rgba(0, 255, 136, 0.2);
-            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0, 255, 136, 0.25), 0 5px 15px rgba(0, 255, 136, 0.1);
+            transform: translateY(-6px) scale(1.02);
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, rgba(0, 0, 0, 0.8) 100%);
+        }
+
+        .featured-card:active {
+            transform: translateY(-4px) scale(1.01);
+            transition: all 0.1s ease;
         }
 
         .featured-header {
@@ -2716,29 +2887,35 @@
                 </div>
             `;
 
-            // Comprehensive list of quality stocks across different categories
+            // Expanded list of stocks with higher growth potential across market caps
             const stockCandidates = [
-                // Large Cap Tech (High Growth Potential)
-                'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'NFLX', 'CRM',
-                // Large Cap Stable (Safety + Growth)
-                'JNJ', 'PG', 'KO', 'PEP', 'WMT', 'HD', 'V', 'MA',
-                // Growth Stocks (High Potential)
-                'TSLA', 'SHOP', 'SQ', 'ROKU', 'ZM', 'PTON', 'PLTR',
-                // Financial (Stable Growth)
-                'JPM', 'BAC', 'GS', 'MS', 'WFC', 'C',
-                // Healthcare (Defensive Growth)
-                'UNH', 'ABBV', 'PFE', 'MRK', 'TMO', 'DHR',
-                // Energy (Value + Growth)
-                'XOM', 'CVX', 'COP', 'EOG', 'SLB',
-                // Emerging/Mid-Cap Opportunities
-                'AMD', 'INTC', 'QCOM', 'ADBE', 'NOW', 'SNOW'
+                // AI & Tech Leaders (High Growth)
+                'NVDA', 'AMD', 'PLTR', 'SNOW', 'CRWD', 'ZS', 'OKTA', 'NET',
+                // Large Cap Tech (Established Growth)
+                'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NFLX', 'CRM', 'ADBE',
+                // Emerging Tech & Growth
+                'RBLX', 'U', 'DDOG', 'COIN', 'HOOD', 'SOFI', 'AFRM', 'SQ',
+                // Biotech & Healthcare Innovation
+                'MRNA', 'BNTX', 'NVAX', 'GILD', 'REGN', 'VRTX', 'ILMN', 'ISRG',
+                // Clean Energy & EV
+                'TSLA', 'RIVN', 'LCID', 'ENPH', 'SEDG', 'PLUG', 'FCEL', 'BE',
+                // Fintech & Digital Payments
+                'PYPL', 'SQ', 'AFRM', 'UPST', 'LMND', 'OPEN', 'Z', 'COIN',
+                // Gaming & Entertainment
+                'RBLX', 'EA', 'ATVI', 'TTWO', 'NFLX', 'DIS', 'ROKU', 'FUBO',
+                // Cloud & SaaS
+                'CRM', 'NOW', 'SNOW', 'DDOG', 'MDB', 'ESTC', 'SPLK', 'WDAY',
+                // E-commerce & Consumer
+                'SHOP', 'ETSY', 'CHWY', 'PTON', 'LULU', 'NKE', 'SBUX', 'CMG',
+                // Traditional Blue Chips (Stability)
+                'JNJ', 'PG', 'KO', 'WMT', 'HD', 'V', 'MA', 'JPM'
             ];
 
             const candidates = [];
 
             try {
                 // Analyze a broader set of stocks to find the best opportunities
-                for (const symbol of stockCandidates.slice(0, 8)) { // Reduce to 8 for faster loading
+                for (const symbol of stockCandidates.slice(0, 12)) { // Analyze 12 stocks for better diversity
                     try {
                         console.log(`Fetching prediction for ${symbol}...`);
                         const response = await fetch('/api/predict', {
@@ -2756,10 +2933,10 @@
                             const prediction = await response.json();
                             console.log(`Prediction for ${symbol}:`, prediction);
 
-                            if (!prediction.error && prediction.expected_change_percent > 0 && prediction.confidence >= 70) {
+                            if (!prediction.error && prediction.expected_change_percent > 0 && prediction.confidence >= 65) {
                                 const safetyScore = calculateSafetyScore(prediction);
                                 const growthScore = calculateGrowthScore(prediction);
-                                const overallScore = (safetyScore * 0.5) + (growthScore * 0.5); // Equal weight for growth and safety
+                                const overallScore = (safetyScore * 0.35) + (growthScore * 0.65); // Favor growth potential while maintaining safety
 
                                 candidates.push({
                                     symbol: prediction.symbol,
@@ -2809,22 +2986,27 @@
         function calculateSafetyScore(prediction) {
             let score = 0;
 
-            // Confidence level (higher weight for confidence)
-            score += prediction.confidence * 0.6; // Max 60 points
+            // Confidence level (moderate weight for confidence)
+            score += prediction.confidence * 0.4; // Max 40 points
 
-            // Market cap safety (larger = safer)
-            if (prediction.market_cap > 200000000000) score += 25; // >$200B (large cap)
-            else if (prediction.market_cap > 10000000000) score += 20; // >$10B (mid cap)
+            // Market cap safety (adjusted to be less restrictive)
+            if (prediction.market_cap > 100000000000) score += 20; // >$100B (large cap)
+            else if (prediction.market_cap > 10000000000) score += 18; // >$10B (mid cap)
             else if (prediction.market_cap > 2000000000) score += 15; // >$2B (small cap)
-            else score -= 10; // Penalty for micro caps
+            else if (prediction.market_cap > 500000000) score += 10; // >$500M (micro cap)
+            else score -= 5; // Small penalty for very small caps
 
-            // Sector safety
-            const safeSectors = ['Technology', 'Healthcare', 'Consumer Staples', 'Utilities', 'Financials'];
+            // Sector safety (more inclusive)
+            const safeSectors = ['Technology', 'Healthcare', 'Consumer Staples', 'Utilities', 'Financials', 'Communication Services'];
             if (safeSectors.includes(prediction.sector)) score += 15;
 
-            // Avoid penny stocks (strong penalty)
-            if (!prediction.is_penny_stock) score += 20;
-            else score -= 30;
+            // Growth sectors get additional safety points if they're established
+            const establishedGrowthSectors = ['Technology', 'Healthcare'];
+            if (establishedGrowthSectors.includes(prediction.sector) && prediction.market_cap > 5000000000) score += 10;
+
+            // Avoid penny stocks but less harsh penalty
+            if (!prediction.is_penny_stock) score += 15;
+            else score -= 20;
 
             return Math.max(Math.min(score, 100), 0);
         }
@@ -2832,24 +3014,41 @@
         function calculateGrowthScore(prediction) {
             let score = 0;
 
-            // Expected growth (prioritize realistic but strong growth)
-            const growth = prediction.expected_change_percent;
-            if (growth > 20) score += 60; // Excellent growth
-            else if (growth > 15) score += 50; // Very good growth
-            else if (growth > 10) score += 40; // Good growth
-            else if (growth > 5) score += 25; // Moderate growth
-            else if (growth > 0) score += 10; // Minimal growth
+            // Expected change (main factor with higher weight for significant gains)
+            const changePercent = prediction.expected_change_percent;
+            if (changePercent > 30) score += 70; // Exceptional growth potential
+            else if (changePercent > 25) score += 60; // Very high growth
+            else if (changePercent > 20) score += 50; // High growth
+            else if (changePercent > 15) score += 40; // Good growth
+            else if (changePercent > 10) score += 30; // Moderate growth
+            else if (changePercent > 5) score += 20; // Low growth
+            else score += changePercent * 2; // Linear for smaller gains
 
-            // High-growth sectors bonus
-            const growthSectors = ['Technology', 'Healthcare', 'Energy', 'Consumer Discretionary', 'Communication Services'];
-            if (growthSectors.includes(prediction.sector)) score += 20;
+            // High-growth sectors get significant bonus
+            const highGrowthSectors = ['Technology', 'Healthcare', 'Communication Services', 'Consumer Discretionary'];
+            if (highGrowthSectors.includes(prediction.sector)) score += 25;
+
+            // Innovation/disruptive sectors get extra bonus
+            const innovationSectors = ['Technology'];
+            if (innovationSectors.includes(prediction.sector)) score += 10;
+
+            // Timeframe bonus (reward faster gains)
+            if (prediction.timeframe === '1-2 months') score += 20;
+            else if (prediction.timeframe === '2-3 months') score += 15;
+            else if (prediction.timeframe === '3-6 months') score += 10;
+            else score += 5;
+
+            // Confidence bonus (reward high-confidence predictions)
+            if (prediction.confidence > 80) score += 15;
+            else if (prediction.confidence > 70) score += 10;
+            else if (prediction.confidence > 60) score += 5;
 
             // Prediction strength bonus
             if (prediction.prediction.includes('STRONG BUY')) score += 20;
             else if (prediction.prediction.includes('BUY')) score += 15;
-            else if (prediction.prediction.includes('HOLD')) score += 5;
+            else if (prediction.prediction.includes('SPECULATIVE BUY')) score += 25; // Higher reward for speculative opportunities
 
-            return Math.min(score, 100);
+            return Math.max(0, Math.min(100, score));
         }
 
         function generateOpportunityReasoning(prediction) {
@@ -2908,13 +3107,13 @@
 
             console.log('Displaying featured opportunities:', featured);
 
-            grid.innerHTML = featured.map(item => {
+            grid.innerHTML = featured.map((item, index) => {
                 try {
                     const changeClass = item.analysis.upside > 0 ? 'positive' : 'negative';
                     const changeSign = item.analysis.upside > 0 ? '+' : '';
 
                     return `
-                        <div class="featured-card" onclick="analyzeFeatured('${item.symbol}')">
+                        <div class="featured-card animate-fade-in" onclick="analyzeFeatured('${item.symbol}')" style="animation-delay: ${index * 0.1}s">
                             <div class="featured-header">
                                 <div class="featured-symbol">${item.symbol}</div>
                                 <div class="featured-upside ${changeClass}">${changeSign}${item.analysis.upside.toFixed(1)}%</div>
