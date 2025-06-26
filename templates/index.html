@@ -1698,6 +1698,9 @@
                 <div class="watchlist-header">
                     <h2><i class="fas fa-star"></i> Your Watchlist</h2>
                     <p>Track your favorite stocks and monitor AI predictions</p>
+                    <button onclick="loadWatchlist()" style="background: #00ff88; color: #000; border: none; padding: 8px 16px; border-radius: 4px; margin-left: 10px;">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
                 </div>
                 <div id="watchlistContent" class="watchlist-content">
                     <div class="empty-watchlist">
@@ -1946,6 +1949,7 @@
             document.getElementById('dashboardUsername').textContent = currentUser.name;
             generateFeaturedOpportunities();
             updateWatchlistCount();
+            loadWatchlist(); // Load watchlist items
             loadAvailableStocks(); // Load stocks for dropdown
             loadDashboardStats(); // Load the new dashboard statistics
 
@@ -2953,7 +2957,14 @@
         }
 
         function loadWatchlist() {
+            console.log('loadWatchlist called, watchlist length:', watchlist.length);
+            console.log('watchlist data:', watchlist);
+
             const content = document.getElementById('watchlistContent');
+            if (!content) {
+                console.error('watchlistContent element not found!');
+                return;
+            }
 
             if (watchlist.length === 0) {
                 content.innerHTML = `
@@ -2969,9 +2980,14 @@
                 return;
             }
 
-            content.innerHTML = `
-                <div class="watchlist-grid">
-                    ${watchlist.map(item => `
+            console.log('Rendering watchlist with', watchlist.length, 'items');
+
+            try {
+                content.innerHTML = `
+                    <div class="watchlist-grid">
+                        ${watchlist.map((item, index) => {
+                            console.log(`Rendering item ${index}:`, item);
+                            return `
                         <div class="watchlist-card">
                             <div class="watchlist-header-row">
                                 <div class="watchlist-symbol">${item.symbol}</div>
@@ -3000,9 +3016,20 @@
                                 </button>
                             </div>
                         </div>
-                    `).join('')}
-                </div>
-            `;
+                    `;
+                        }).join('')}
+                    </div>
+                `;
+                console.log('Watchlist rendered successfully');
+            } catch (error) {
+                console.error('Error rendering watchlist:', error);
+                content.innerHTML = `
+                    <div style="text-align: center; color: #ff4444; padding: 40px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px;"></i>
+                        <p>Error loading watchlist. Please try refreshing the page.</p>
+                    </div>
+                `;
+            }
         }
 
         function analyzeWatchlistStock(symbol) {
