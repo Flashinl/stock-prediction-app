@@ -320,27 +320,34 @@ class NeuralNetworkStockPredictor:
             # Calculate confidence and expected change
             confidence = max(prediction_proba) * 100
 
-            # Determine expected change based on prediction and confidence
+            # Calculate base expected change based on prediction and confidence (for 3-month baseline)
             if prediction_label == 'BUY':
-                expected_change = 2.0 + (confidence - 50) * 0.1  # 2-7% range
+                base_expected_change = 2.0 + (confidence - 50) * 0.1  # 2-7% range
             elif prediction_label == 'SELL':
-                expected_change = -2.0 - (confidence - 50) * 0.1  # -2% to -7% range
+                base_expected_change = -2.0 - (confidence - 50) * 0.1  # -2% to -7% range
             else:  # HOLD
-                expected_change = 0.0 + (confidence - 50) * 0.02  # -1% to +1% range
+                base_expected_change = 0.0 + (confidence - 50) * 0.02  # -1% to +1% range
 
-            # Calculate target price
+            # Determine auto timeframe based on confidence
+            if confidence >= 90:
+                auto_timeframe = "1-2 months"
+            elif confidence >= 80:
+                auto_timeframe = "2-3 months"
+            elif confidence >= 70:
+                auto_timeframe = "3-6 months"
+            else:
+                auto_timeframe = "6-12 months"
+
+            # Use override timeframe if provided, otherwise use auto timeframe
+            final_timeframe = timeframe_override if timeframe_override and timeframe_override != 'auto' else auto_timeframe
+
+            # Scale expected change based on actual timeframe
+            timeframe_multiplier = self._get_timeframe_multiplier(final_timeframe)
+            expected_change = base_expected_change * timeframe_multiplier
+
+            # Calculate target price with scaled expected change
             current_price = features['current_price']
             target_price = current_price * (1 + expected_change / 100)
-
-            # Determine timeframe based on confidence
-            if confidence >= 90:
-                timeframe = "1-2 months"
-            elif confidence >= 80:
-                timeframe = "2-3 months"
-            elif confidence >= 70:
-                timeframe = "3-6 months"
-            else:
-                timeframe = "6-12 months"
 
             # Get additional info
             ticker = yf.Ticker(symbol)
@@ -356,7 +363,7 @@ class NeuralNetworkStockPredictor:
 
             # Generate historical and prediction data for charts
             historical_data = self._generate_historical_data(hist, symbol)
-            prediction_data = self._generate_prediction_data(current_price, expected_change, timeframe)
+            prediction_data = self._generate_prediction_data(current_price, expected_change, final_timeframe)
             volume_data = self._generate_volume_data(hist)
 
             # Convert numpy types to Python native types for JSON serialization
@@ -389,7 +396,7 @@ class NeuralNetworkStockPredictor:
                 'expected_change_percent': float(round(expected_change, 2)),
                 'target_price': float(round(target_price, 2)),
                 'current_price': float(round(current_price, 2)),
-                'timeframe': timeframe_override or timeframe,
+                'timeframe': final_timeframe,
                 'model_type': 'Neural Network (97.5% accuracy)',
                 'technical_indicators': {
                     'rsi': float(round(features.get('rsi', 50), 2)),
@@ -492,7 +499,7 @@ class NeuralNetworkStockPredictor:
             logger.error(f"Error in fallback prediction: {e}")
             return {'error': 'Prediction failed'}
 
-    def _generate_historical_data(self, hist, symbol):
+    def _generate_historical_data(self, hist, _symbol):
         """Generate historical price data for charts"""
         try:
             if hist.empty:
@@ -502,7 +509,7 @@ class NeuralNetworkStockPredictor:
             recent_hist = hist.tail(30)
             historical_data = []
 
-            for i, (date, row) in enumerate(recent_hist.iterrows()):
+            for date, row in recent_hist.iterrows():
                 historical_data.append({
                     'date': date.strftime('%Y-%m-%d'),
                     'price': round(row['Close'], 2),
@@ -515,26 +522,57 @@ class NeuralNetworkStockPredictor:
             return []
 
     def _generate_prediction_data(self, current_price, expected_change, timeframe):
-        """Generate prediction data for charts"""
+        """Generate realistic prediction data for charts with market-like volatility"""
         try:
-            target_price = current_price * (1 + expected_change / 100)
+            # Determine prediction timeline based on timeframe
+            if '1-2 month' in timeframe.lower():
+                days_ahead = 60
+            elif '2-3 month' in timeframe.lower():
+                days_ahead = 90
+            elif '3-6 month' in timeframe.lower():
+                days_ahead = 180
+            elif '6-12 month' in timeframe.lower():
+                days_ahead = 365
+            elif 'year' in timeframe.lower():
+                days_ahead = 730  # 2 years for long-term predictions
+            else:
+                days_ahead = 90  # Default
 
-            # Generate future prediction points
             prediction_data = []
-            days_ahead = 90 if '3-6' in timeframe else (180 if '6-12' in timeframe else 60)
+            import random
+            import math
 
-            for i in range(1, days_ahead + 1):
-                # Gradual progression to target price with some volatility
+            # Create deterministic but realistic price movement
+            seed_value = hash(f"{current_price}_{expected_change}_{timeframe}") % 2147483647
+            random.seed(seed_value)
+
+            # Generate realistic market movement with trends and volatility
+            for i in range(1, min(days_ahead + 1, 365)):  # Cap at 1 year for display
                 progress = i / days_ahead
-                price_change = expected_change * progress
-                predicted_price = current_price * (1 + price_change / 100)
 
-                # Add some realistic volatility
-                volatility = 0.02 * (1 - progress)  # Less volatility as we approach target
-                import random
-                random.seed(hash(f"{current_price}_{i}") % 2147483647)  # Deterministic randomness
-                noise = (random.random() - 0.5) * volatility * predicted_price
-                predicted_price += noise
+                # Create S-curve progression (slow start, accelerate, then slow down)
+                s_curve_progress = 1 / (1 + math.exp(-6 * (progress - 0.5)))
+
+                # Base price progression using S-curve
+                base_price_change = expected_change * s_curve_progress
+                predicted_price = current_price * (1 + base_price_change / 100)
+
+                # Add realistic market volatility
+                daily_volatility = 0.015  # 1.5% daily volatility
+                weekly_trend = math.sin(i / 7 * math.pi) * 0.005  # Weekly cycles
+                monthly_trend = math.sin(i / 30 * math.pi) * 0.01  # Monthly cycles
+
+                # Random daily movement
+                daily_noise = (random.random() - 0.5) * daily_volatility * predicted_price
+
+                # Trend components
+                trend_component = (weekly_trend + monthly_trend) * predicted_price
+
+                # Apply volatility and trends
+                predicted_price += daily_noise + trend_component
+
+                # Ensure price doesn't go negative
+                predicted_price = max(predicted_price, current_price * 0.1)
 
                 future_date = datetime.now() + timedelta(days=i)
                 prediction_data.append({
@@ -567,6 +605,23 @@ class NeuralNetworkStockPredictor:
         except Exception as e:
             logger.error(f"Error generating volume data: {e}")
             return []
+
+    def _get_timeframe_multiplier(self, timeframe):
+        """Get multiplier for expected change based on timeframe"""
+        timeframe_lower = timeframe.lower()
+
+        if "1-2 month" in timeframe_lower or "1 month" in timeframe_lower:
+            return 0.5  # 50% of base prediction for 1-2 months
+        elif "2-3 month" in timeframe_lower:
+            return 0.8  # 80% of base prediction for 2-3 months
+        elif "3-6 month" in timeframe_lower:
+            return 1.0  # Base prediction for 3-6 months
+        elif "6-12 month" in timeframe_lower or "6 month" in timeframe_lower:
+            return 1.5  # 150% for 6-12 months
+        elif "1-3 year" in timeframe_lower or "year" in timeframe_lower:
+            return 2.0  # 200% for 1+ years
+        else:
+            return 1.0  # Default to base prediction
 
     def _cleanup_cache(self):
         """Clean up expired cache entries"""
