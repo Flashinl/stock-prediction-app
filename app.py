@@ -2215,21 +2215,84 @@ class OriginalStockPredictor_BACKUP:
 
     def _get_sector_world_context(self, sector, symbol):
         """Generate sector-specific reasoning based on current world events and market conditions"""
-        sector_contexts = {
-            'Technology': f"AI revolution and digital transformation driving sector growth, with companies like {symbol} positioned to benefit from increased enterprise adoption",
-            'Healthcare': f"Aging demographics and post-pandemic healthcare focus create long-term tailwinds for {symbol} and the broader healthcare sector",
-            'Financial Services': f"Rising interest rates and digital banking transformation present both opportunities and challenges for {symbol} in the evolving financial landscape",
-            'Consumer Discretionary': f"Consumer spending patterns shifting post-pandemic, with {symbol} adapting to new retail and lifestyle trends",
-            'Energy': f"Global energy transition and geopolitical tensions create volatility, positioning {symbol} within the changing energy landscape",
-            'Industrials': f"Infrastructure spending and supply chain reshoring trends support industrial companies like {symbol}",
-            'Communication Services': f"Digital media consumption and 5G rollout drive growth opportunities for {symbol} in the communications sector",
-            'Consumer Staples': f"Inflation pressures and supply chain challenges test resilience of consumer staples companies like {symbol}",
-            'Materials': f"Global infrastructure projects and green energy transition drive demand for materials companies like {symbol}",
-            'Real Estate': f"Interest rate environment and remote work trends reshape real estate dynamics affecting {symbol}",
-            'Utilities': f"Clean energy transition and grid modernization create investment opportunities for utilities like {symbol}"
-        }
 
-        return sector_contexts.get(sector, f"Current market conditions and sector dynamics influence {symbol}'s fundamental outlook and growth prospects")
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker(symbol)
+            info = ticker.info
+            company_name = info.get('longName', info.get('shortName', symbol))
+            industry = info.get('industry', 'Unknown')
+        except:
+            company_name = symbol
+            industry = 'Unknown'
+
+        # Enhanced sector contexts with company-specific insights
+        if sector == 'Technology':
+            if 'Software' in industry:
+                return f"AI revolution and enterprise software transformation driving growth for {company_name}, with cloud adoption and digital workplace trends accelerating demand"
+            elif 'Semiconductor' in industry:
+                return f"AI chip demand and data center expansion creating unprecedented opportunities for {company_name} in the semiconductor cycle"
+            elif 'Hardware' in industry:
+                return f"Digital transformation and edge computing trends driving hardware demand for {company_name} across enterprise and consumer markets"
+            else:
+                return f"Technology sector leadership in AI and digital transformation positioning {company_name} for sustained growth in the digital economy"
+
+        elif sector == 'Healthcare':
+            if 'Biotechnology' in industry:
+                return f"Breakthrough therapies and personalized medicine trends creating significant value potential for {company_name} in the biotech innovation cycle"
+            elif 'Pharmaceutical' in industry:
+                return f"Aging demographics and global health challenges driving pharmaceutical demand for {company_name}'s therapeutic portfolio"
+            elif 'Medical' in industry:
+                return f"Healthcare digitization and aging population trends supporting medical device demand for {company_name}"
+            else:
+                return f"Healthcare sector resilience and demographic tailwinds creating long-term growth opportunities for {company_name}"
+
+        elif sector == 'Financial Services':
+            if 'Bank' in industry:
+                return f"Interest rate normalization and digital banking transformation supporting net interest margin expansion for {company_name}"
+            elif 'Insurance' in industry:
+                return f"Rate environment and risk management expertise positioning {company_name} for improved underwriting profitability"
+            elif 'Investment' in industry:
+                return f"Market volatility and wealth management trends creating fee income opportunities for {company_name}"
+            else:
+                return f"Financial sector adaptation to rate environment and digital transformation benefiting {company_name}'s business model"
+
+        elif sector == 'Energy':
+            if 'Oil' in industry or 'Gas' in industry:
+                return f"Energy security concerns and capital discipline driving cash flow generation for {company_name} in the traditional energy sector"
+            elif 'Renewable' in industry:
+                return f"Clean energy transition and climate policy support creating growth acceleration for {company_name} in renewable energy"
+            else:
+                return f"Energy transition dynamics and geopolitical factors creating both challenges and opportunities for {company_name}"
+
+        elif sector == 'Consumer Discretionary':
+            if 'Retail' in industry:
+                return f"Consumer spending normalization and omnichannel retail evolution supporting {company_name}'s market position"
+            elif 'Automotive' in industry:
+                return f"Electric vehicle transition and autonomous driving trends positioning {company_name} for automotive industry transformation"
+            else:
+                return f"Consumer discretionary recovery and changing spending patterns creating opportunities for {company_name}"
+
+        elif sector == 'Consumer Staples':
+            return f"Defensive characteristics and pricing power helping {company_name} navigate inflation pressures while maintaining market share"
+
+        elif sector == 'Industrials':
+            return f"Infrastructure investment and supply chain reshoring trends driving demand for {company_name}'s industrial solutions"
+
+        elif sector == 'Materials':
+            return f"Green energy transition and infrastructure development creating commodity demand supporting {company_name}'s operations"
+
+        elif sector == 'Real Estate':
+            return f"Real estate market adaptation to interest rates and work pattern changes affecting {company_name}'s portfolio positioning"
+
+        elif sector == 'Utilities':
+            return f"Grid modernization and renewable energy integration creating investment opportunities for {company_name} in utility infrastructure"
+
+        elif sector == 'Communication Services':
+            return f"Digital media consumption and 5G infrastructure deployment driving growth opportunities for {company_name}"
+
+        else:
+            return f"Current market conditions and {sector.lower()} sector dynamics creating strategic opportunities for {company_name}"
 
     def _get_current_market_context(self, symbol, sector, category):
         """Generate comprehensive real-world market context and current events analysis"""
@@ -2396,6 +2459,7 @@ class OriginalStockPredictor_BACKUP:
         """Get current events and news specific to individual companies"""
         events = []
 
+        # Major tech companies
         if symbol == 'AAPL':
             events = [
                 'iPhone 15 launch with USB-C transition driving upgrade cycle',
@@ -2410,7 +2474,7 @@ class OriginalStockPredictor_BACKUP:
                 'Office 365 Copilot driving productivity software transformation',
                 'Gaming division benefiting from Activision Blizzard acquisition'
             ]
-        elif symbol == 'GOOGL':
+        elif symbol == 'GOOGL' or symbol == 'GOOG':
             events = [
                 'Bard AI competing with ChatGPT in generative AI market',
                 'Search advertising showing resilience despite economic headwinds',
@@ -2445,6 +2509,36 @@ class OriginalStockPredictor_BACKUP:
                 'AI-powered advertising targeting improving despite privacy changes',
                 'WhatsApp Business monetization expanding in international markets'
             ]
+
+        # Additional major companies
+        elif symbol == 'NFLX':
+            events = [
+                'Password sharing crackdown driving subscriber growth acceleration',
+                'Ad-supported tier gaining traction with cost-conscious consumers',
+                'Content investment in international markets expanding global reach',
+                'Gaming initiatives creating new engagement and revenue opportunities'
+            ]
+        elif symbol == 'CRM':
+            events = [
+                'Einstein AI platform integration across Salesforce cloud products',
+                'Slack acquisition synergies improving enterprise collaboration offerings',
+                'Industry-specific cloud solutions driving vertical market expansion',
+                'Subscription model resilience providing predictable revenue growth'
+            ]
+        elif symbol == 'ORCL':
+            events = [
+                'Cloud infrastructure growth competing with AWS and Azure',
+                'Database modernization driving enterprise digital transformation',
+                'AI and machine learning capabilities enhancing cloud offerings',
+                'Strategic partnerships expanding market reach and capabilities'
+            ]
+        elif symbol == 'ADBE':
+            events = [
+                'Creative Cloud AI features enhancing content creation workflows',
+                'Document Cloud growth driven by remote work digitization trends',
+                'Experience Cloud benefiting from customer experience focus',
+                'Subscription model providing stable recurring revenue streams'
+            ]
         elif symbol == 'LUMN':
             events = [
                 'Fiber network expansion benefiting from broadband infrastructure demand',
@@ -2452,6 +2546,8 @@ class OriginalStockPredictor_BACKUP:
                 'Debt reduction efforts improving financial flexibility',
                 'Edge computing services addressing latency-sensitive applications'
             ]
+
+        # Financial sector
         elif symbol in ['JPM', 'BAC', 'WFC', 'C']:
             events = [
                 'Net interest margin expansion benefiting from rate environment',
@@ -2459,6 +2555,15 @@ class OriginalStockPredictor_BACKUP:
                 'Digital banking investments improving customer acquisition',
                 'Regulatory stress tests demonstrating capital strength'
             ]
+        elif symbol in ['GS', 'MS']:
+            events = [
+                'Investment banking fees recovering with market activity normalization',
+                'Wealth management growth driven by high-net-worth client acquisition',
+                'Trading revenue benefiting from market volatility and client activity',
+                'Digital transformation initiatives improving operational efficiency'
+            ]
+
+        # Healthcare sector
         elif symbol in ['JNJ', 'PFE', 'MRK', 'ABBV']:
             events = [
                 'Pipeline drug approvals providing new revenue growth drivers',
@@ -2466,8 +2571,100 @@ class OriginalStockPredictor_BACKUP:
                 'Emerging market expansion addressing global health needs',
                 'AI-powered drug discovery accelerating development timelines'
             ]
+        elif symbol in ['UNH', 'ANTM', 'CVS']:
+            events = [
+                'Medicare Advantage enrollment growth driving membership expansion',
+                'Value-based care initiatives improving cost management and outcomes',
+                'Digital health investments enhancing member engagement and care delivery',
+                'Pharmacy benefit management optimization reducing drug costs'
+            ]
+
+        # If no specific events found, generate based on company info
+        if not events:
+            events = self._generate_dynamic_company_events(symbol)
 
         return events
+
+    def _generate_dynamic_company_events(self, symbol):
+        """Generate company-specific events based on real company data"""
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker(symbol)
+            info = ticker.info
+
+            events = []
+            company_name = info.get('longName', info.get('shortName', symbol))
+            sector = info.get('sector', 'Unknown')
+            industry = info.get('industry', 'Unknown')
+            market_cap = info.get('marketCap', 0)
+
+            # Generate events based on company characteristics
+            if market_cap:
+                if market_cap > 200_000_000_000:  # Large cap
+                    events.append(f"{company_name}'s market leadership position providing defensive characteristics in current market environment")
+                elif market_cap > 10_000_000_000:  # Mid cap
+                    events.append(f"{company_name}'s growth trajectory benefiting from market expansion opportunities")
+                else:  # Small cap
+                    events.append(f"{company_name}'s agile business model positioned to capitalize on emerging market trends")
+
+            # Sector-specific events
+            if sector == 'Technology':
+                events.append(f"{company_name} leveraging digital transformation trends and AI adoption across enterprise markets")
+            elif sector == 'Healthcare':
+                events.append(f"{company_name} positioned to benefit from aging demographics and healthcare innovation trends")
+            elif sector == 'Financial Services':
+                events.append(f"{company_name} adapting to evolving interest rate environment and digital banking transformation")
+            elif sector == 'Energy':
+                events.append(f"{company_name} navigating energy transition while maintaining operational efficiency")
+            elif sector == 'Consumer Discretionary':
+                events.append(f"{company_name} adapting to changing consumer spending patterns and e-commerce trends")
+            elif sector == 'Consumer Staples':
+                events.append(f"{company_name}'s defensive characteristics providing stability during economic uncertainty")
+            elif sector == 'Industrials':
+                events.append(f"{company_name} benefiting from infrastructure investment and supply chain reshoring trends")
+            elif sector == 'Materials':
+                events.append(f"{company_name} positioned for commodity cycle recovery and green energy transition demand")
+            elif sector == 'Real Estate':
+                events.append(f"{company_name} adapting to evolving work patterns and interest rate environment impacts")
+            elif sector == 'Utilities':
+                events.append(f"{company_name} investing in grid modernization and renewable energy infrastructure")
+            elif sector == 'Communication Services':
+                events.append(f"{company_name} capitalizing on digital media consumption and 5G infrastructure deployment")
+
+            # Industry-specific insights
+            if 'Software' in industry:
+                events.append(f"Software industry consolidation and AI integration creating opportunities for {company_name}")
+            elif 'Semiconductor' in industry:
+                events.append(f"Semiconductor demand driven by AI, automotive, and IoT applications benefiting {company_name}")
+            elif 'Biotechnology' in industry:
+                events.append(f"Biotechnology innovation pipeline and regulatory approvals driving {company_name} growth potential")
+            elif 'Bank' in industry:
+                events.append(f"Banking sector net interest margin expansion and digital transformation supporting {company_name}")
+            elif 'Insurance' in industry:
+                events.append(f"Insurance industry benefiting from rate environment and risk management expertise at {company_name}")
+            elif 'Retail' in industry:
+                events.append(f"Retail sector omnichannel strategies and consumer adaptation benefiting {company_name}")
+            elif 'Pharmaceutical' in industry:
+                events.append(f"Pharmaceutical pipeline development and global health trends supporting {company_name}")
+            elif 'Oil' in industry or 'Gas' in industry:
+                events.append(f"Energy sector capital discipline and operational efficiency focus at {company_name}")
+
+            # Ensure we have at least 2 events
+            if len(events) < 2:
+                events.append(f"{company_name} adapting business strategy to current market conditions and economic environment")
+                events.append(f"Company fundamentals and market positioning supporting {company_name}'s investment thesis")
+
+            return events[:4]  # Limit to 4 events max
+
+        except Exception as e:
+            logger.error(f"Error generating dynamic company events for {symbol}: {e}")
+            # Fallback generic events
+            return [
+                f"Company positioned to navigate current market conditions",
+                f"Business fundamentals supporting long-term growth potential",
+                f"Market dynamics creating opportunities for operational efficiency",
+                f"Strategic initiatives aligned with industry trends"
+            ]
 
     def _get_enhanced_sector_trends(self, sector):
         """Get comprehensive sector trends with current market dynamics"""
@@ -2535,53 +2732,71 @@ class OriginalStockPredictor_BACKUP:
     def _generate_investment_thesis(self, symbol, sector, category, market_context, prediction_result):
         """Generate comprehensive investment thesis based on current market conditions"""
 
+        try:
+            import yfinance as yf
+            ticker = yf.Ticker(symbol)
+            info = ticker.info
+            company_name = info.get('longName', info.get('shortName', symbol))
+        except:
+            company_name = symbol
+
         # Base thesis components
         thesis_components = []
 
-        # Market positioning
+        # Company-specific positioning
         if category in ['large_cap', 'mid_cap']:
-            thesis_components.append("established market position provides defensive characteristics")
+            thesis_components.append(f"{company_name}'s established market leadership provides stability and defensive characteristics")
         elif category in ['small_cap', 'micro_cap']:
-            thesis_components.append("growth potential from market share expansion opportunities")
+            thesis_components.append(f"{company_name}'s growth potential from market share expansion and operational scaling")
         elif category in ['penny', 'micro_penny']:
-            thesis_components.append("speculative opportunity with high risk/reward profile")
+            thesis_components.append(f"{company_name} represents speculative opportunity with transformative potential")
 
-        # Sector-specific thesis
-        sector_trends = market_context.get('sector_trends', {})
-        if sector_trends:
-            outlook = sector_trends.get('outlook', '')
-            if 'outperformance' in outlook.lower():
-                thesis_components.append(f"sector positioned for outperformance due to {sector_trends.get('current_dynamics', 'favorable trends')}")
-            elif 'recovery' in outlook.lower():
-                thesis_components.append(f"cyclical recovery potential as {sector_trends.get('current_dynamics', 'conditions improve')}")
-            else:
-                thesis_components.append(f"sector dynamics suggest {outlook.lower()}")
-
-        # Company-specific catalysts
+        # Company-specific catalysts (prioritize over generic sector trends)
         news_context = market_context.get('news_sentiment', {})
         company_news = news_context.get('company_news', [])
         if company_news:
-            thesis_components.append(f"near-term catalysts include {company_news[0].lower()}")
+            # Use the most relevant company-specific catalyst
+            primary_catalyst = company_news[0].lower()
+            if len(company_news) > 1:
+                secondary_catalyst = company_news[1].lower()
+                thesis_components.append(f"{company_name}'s {primary_catalyst} while {secondary_catalyst}")
+            else:
+                thesis_components.append(f"{company_name}'s {primary_catalyst}")
 
-        # Economic environment impact
+        # Sector-specific thesis with company context
+        sector_trends = market_context.get('sector_trends', {})
+        if sector_trends and sector != 'Unknown':
+            outlook = sector_trends.get('outlook', '')
+            current_dynamics = sector_trends.get('current_dynamics', '')
+            if 'outperformance' in outlook.lower():
+                thesis_components.append(f"{company_name} positioned to benefit from {sector.lower()} sector outperformance driven by {current_dynamics.lower()}")
+            elif 'recovery' in outlook.lower():
+                thesis_components.append(f"{company_name} leveraging {sector.lower()} sector recovery as {current_dynamics.lower()}")
+            else:
+                thesis_components.append(f"{company_name} navigating {sector.lower()} sector dynamics with {outlook.lower()}")
+
+        # Economic environment impact with company specificity
         econ_context = market_context.get('economic_indicators', {})
         if prediction_result['expected_change'] > 0:
             if econ_context.get('gdp_growth', '').find('positive') != -1:
-                thesis_components.append("supportive economic backdrop for growth")
+                thesis_components.append(f"{company_name} benefiting from supportive economic backdrop and growth momentum")
             else:
-                thesis_components.append("company-specific drivers outweighing macro headwinds")
+                thesis_components.append(f"{company_name}'s company-specific drivers outweighing broader macro headwinds")
         else:
-            thesis_components.append("macro environment creating near-term challenges")
+            thesis_components.append(f"{company_name} facing headwinds from challenging macro environment")
 
-        # Risk assessment
+        # Risk assessment with company context
         confidence = prediction_result.get('confidence', 50)
         if confidence > 75:
-            thesis_components.append("high conviction opportunity with multiple supporting factors")
+            thesis_components.append(f"high conviction opportunity for {company_name} with multiple supporting catalysts")
         elif confidence < 50:
-            thesis_components.append("elevated uncertainty requiring careful position sizing")
+            thesis_components.append(f"{company_name} requires careful position sizing due to elevated uncertainty")
 
-        # Combine thesis components
-        thesis = "Investment thesis: " + ", ".join(thesis_components[:3])  # Limit to 3 key points
+        # Combine thesis components with company focus
+        if len(thesis_components) >= 3:
+            thesis = f"Investment thesis for {company_name}: " + ", ".join(thesis_components[:3])
+        else:
+            thesis = f"Investment thesis for {company_name}: " + ", ".join(thesis_components)
 
         return thesis
 
@@ -2610,8 +2825,60 @@ def predict():
         if not symbol:
             return jsonify({"error": "Stock symbol is required"}), 400
 
+        # Get neural network prediction
         prediction = predictor.predict_stock_movement(symbol, timeframe)
-        logger.info(f"Prediction result: {prediction}")
+        logger.info(f"Neural network prediction result: {prediction}")
+
+        # Add enhanced reasoning using the backup predictor's reasoning functions
+        if 'error' not in prediction:
+            try:
+                # Create backup predictor instance for enhanced reasoning
+                backup_predictor = OriginalStockPredictor_BACKUP()
+
+                # Get stock data for enhanced reasoning
+                stock_data = {
+                    'symbol': symbol,
+                    'company_name': prediction.get('company_name', symbol),
+                    'sector': prediction.get('sector', 'Unknown'),
+                    'industry': prediction.get('industry', 'Unknown'),
+                    'market_cap': prediction.get('market_cap', 0),
+                    'current_price': prediction.get('current_price', 0),
+                    'volume': prediction.get('technical_indicators', {}).get('volume', 0)
+                }
+
+                # Get technical indicators from neural network result
+                indicators = prediction.get('technical_indicators', {})
+                indicators['current_price'] = prediction.get('current_price', 0)
+
+                # Determine category
+                category = backup_predictor.get_stock_category(stock_data)
+
+                # Calculate confidence for enhanced reasoning
+                confidence = prediction.get('confidence', 50) / 100.0
+
+                # Create prediction result for enhanced reasoning
+                prediction_result = {
+                    'prediction': prediction.get('prediction', 'HOLD'),
+                    'expected_change': prediction.get('expected_change_percent', 0),
+                    'target_price': prediction.get('target_price', 0),
+                    'reasoning': f"Neural network analysis indicates {prediction.get('prediction', 'HOLD')} recommendation",
+                    'confidence': confidence
+                }
+
+                # Generate enhanced reasoning
+                market_context = backup_predictor._get_current_market_context(symbol, stock_data['sector'], category)
+                enhanced_reasoning = backup_predictor._generate_enhanced_reasoning(
+                    stock_data, indicators, category, prediction_result, confidence
+                )
+
+                # Add enhanced reasoning to the prediction result
+                prediction['enhanced_reasoning'] = enhanced_reasoning
+
+                logger.info(f"Enhanced reasoning added with {len(enhanced_reasoning)} points")
+
+            except Exception as reasoning_error:
+                logger.error(f"Error generating enhanced reasoning: {reasoning_error}")
+                # Continue without enhanced reasoning if it fails
 
         return jsonify(prediction)
 
