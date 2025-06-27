@@ -48,31 +48,89 @@ class NeuralNetworkStockPredictor:
             logger.error(f"Error loading neural network model: {e}")
             return False
     
-    def extract_comprehensive_features(self, symbol):
-        """Extract all features used by the neural network"""
+    def extract_comprehensive_features(self, symbol, timeframe_days=90):
+        """Extract all features used by the neural network including timeframe features"""
         try:
             # Get stock data from yfinance
             ticker = yf.Ticker(symbol)
             hist = ticker.history(period="1y")
             info = ticker.info
-            
+
             if hist.empty:
                 return None
-                
+
             # Calculate technical indicators (same as training)
             technical_features = self._calculate_technical_indicators(hist)
-            
+
             # Extract fundamental features
             fundamental_features = self._extract_fundamental_features(info)
-            
+
+            # Add timeframe features - THE KEY ADDITION!
+            timeframe_features = self._extract_timeframe_features(timeframe_days, technical_features)
+
             # Combine all features
-            features = {**technical_features, **fundamental_features}
-            
+            features = {**technical_features, **fundamental_features, **timeframe_features}
+
             return features
-            
+
         except Exception as e:
             logger.error(f"Error extracting features for {symbol}: {e}")
             return None
+
+    def _extract_timeframe_features(self, timeframe_days, technical_features):
+        """Extract timeframe-specific features"""
+        # Normalize timeframe to 0-1 scale
+        timeframe_normalized = timeframe_days / 365.0
+
+        # Categorical timeframe features
+        timeframe_short = 1 if timeframe_days <= 60 else 0
+        timeframe_medium = 1 if 60 < timeframe_days <= 180 else 0
+        timeframe_long = 1 if timeframe_days > 180 else 0
+
+        # Timeframe-adjusted volatility factor
+        timeframe_volatility_factor = np.sqrt(timeframe_days / 30.0)
+
+        # Get volatility from technical features
+        volatility = technical_features.get('volatility', 0.02)
+        rsi = technical_features.get('rsi', 50)
+        price_momentum = technical_features.get('price_momentum', 0)
+
+        return {
+            # Core timeframe features
+            'timeframe_days': timeframe_days,
+            'timeframe_normalized': timeframe_normalized,
+            'timeframe_short': timeframe_short,
+            'timeframe_medium': timeframe_medium,
+            'timeframe_long': timeframe_long,
+            'timeframe_volatility_factor': timeframe_volatility_factor,
+
+            # Interaction features (timeframe * technical indicators)
+            'timeframe_x_volatility': timeframe_normalized * volatility,
+            'timeframe_x_momentum': timeframe_normalized * price_momentum,
+            'timeframe_x_rsi': timeframe_normalized * rsi,
+
+            # Timeframe-specific expectations
+            'expected_volatility_for_timeframe': volatility * timeframe_volatility_factor,
+            'timeframe_risk_factor': min(timeframe_normalized * 2, 1.0),  # Higher risk for longer timeframes
+        }
+
+    def _parse_timeframe_to_days(self, timeframe_override):
+        """Convert timeframe string to days"""
+        if not timeframe_override:
+            return 90  # Default 3 months
+
+        timeframe_lower = timeframe_override.lower()
+
+        if '1-2 month' in timeframe_lower or '1 month' in timeframe_lower:
+            return 45
+        elif '2-3 month' in timeframe_lower or '3 month' in timeframe_lower:
+            return 90
+        elif '3-6 month' in timeframe_lower or '6 month' in timeframe_lower:
+            return 180
+        elif '6-12 month' in timeframe_lower or '12 month' in timeframe_lower or 'year' in timeframe_lower:
+            return 365
+        else:
+            return 90  # Default fallback
     
     def _calculate_technical_indicators(self, hist):
         """Calculate technical indicators (same as training dataset)"""
@@ -335,13 +393,16 @@ class NeuralNetworkStockPredictor:
         return features
 
     def predict_stock_movement(self, symbol, timeframe_override=None):
-        """Main prediction function using neural network"""
+        """Main prediction function using neural network with timeframe awareness"""
         try:
             import time
             logger.info(f"Starting neural network prediction for {symbol}")
 
+            # Determine timeframe in days
+            timeframe_days = self._parse_timeframe_to_days(timeframe_override)
+
             # Check cache for recent prediction
-            cache_key = f"{symbol}_{timeframe_override or 'auto'}"
+            cache_key = f"{symbol}_{timeframe_days}"
             current_time = time.time()
 
             if cache_key in self._prediction_cache:
@@ -350,8 +411,8 @@ class NeuralNetworkStockPredictor:
                     logger.info(f"Returning cached prediction for {symbol}")
                     return cached_result
 
-            # Extract features
-            features = self.extract_comprehensive_features(symbol)
+            # Extract features WITH timeframe
+            features = self.extract_comprehensive_features(symbol, timeframe_days)
             if not features:
                 return {'error': 'Could not extract features for prediction'}
 
@@ -422,7 +483,8 @@ class NeuralNetworkStockPredictor:
 
             # Generate historical and prediction data for charts
             historical_data = self._generate_historical_data(hist, symbol)
-            prediction_data = self._generate_prediction_data(current_price, expected_change, final_timeframe)
+            volatility = features.get('volatility', 0.02)
+            prediction_data = self._generate_prediction_data(current_price, expected_change, final_timeframe, volatility)
             volume_data = self._generate_volume_data(hist)
 
             # Convert numpy types to Python native types for JSON serialization
@@ -580,22 +642,11 @@ class NeuralNetworkStockPredictor:
             logger.error(f"Error generating historical data: {e}")
             return []
 
-    def _generate_prediction_data(self, current_price, expected_change, timeframe):
+    def _generate_prediction_data(self, current_price, expected_change, timeframe, volatility=0.02):
         """Generate realistic prediction data for charts with market-like volatility"""
         try:
-            # Determine prediction timeline based on timeframe
-            if '1-2 month' in timeframe.lower():
-                days_ahead = 60
-            elif '2-3 month' in timeframe.lower():
-                days_ahead = 90
-            elif '3-6 month' in timeframe.lower():
-                days_ahead = 180
-            elif '6-12 month' in timeframe.lower():
-                days_ahead = 365
-            elif 'year' in timeframe.lower():
-                days_ahead = 730  # 2 years for long-term predictions
-            else:
-                days_ahead = 90  # Default
+            # Parse timeframe to days
+            days_ahead = self._parse_timeframe_to_days(timeframe)
 
             prediction_data = []
             import random
@@ -616,22 +667,23 @@ class NeuralNetworkStockPredictor:
                 base_price_change = expected_change * s_curve_progress
                 predicted_price = current_price * (1 + base_price_change / 100)
 
-                # Add realistic market volatility
-                daily_volatility = 0.015  # 1.5% daily volatility
+                # Add realistic market volatility using actual stock volatility
+                daily_volatility = volatility / math.sqrt(252)  # Convert annual to daily
                 weekly_trend = math.sin(i / 7 * math.pi) * 0.005  # Weekly cycles
                 monthly_trend = math.sin(i / 30 * math.pi) * 0.01  # Monthly cycles
 
-                # Random daily movement
-                daily_noise = (random.random() - 0.5) * daily_volatility * predicted_price
+                # Random daily movement (scaled down for realism)
+                daily_noise = (random.random() - 0.5) * daily_volatility * predicted_price * 0.3
 
-                # Trend components
-                trend_component = (weekly_trend + monthly_trend) * predicted_price
+                # Trend components (scaled down)
+                trend_component = (weekly_trend + monthly_trend) * predicted_price * 0.5
 
                 # Apply volatility and trends
                 predicted_price += daily_noise + trend_component
 
-                # Ensure price doesn't go negative
-                predicted_price = max(predicted_price, current_price * 0.1)
+                # Ensure price stays within reasonable bounds
+                predicted_price = max(predicted_price, current_price * 0.5)  # No more than 50% drop
+                predicted_price = min(predicted_price, current_price * 2.0)  # No more than 100% gain
 
                 future_date = datetime.now() + timedelta(days=i)
                 prediction_data.append({
