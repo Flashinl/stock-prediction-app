@@ -2395,6 +2395,9 @@
             const sma20Seed = seededRandom(symbolSeed * 5.3);
             const sma50Seed = seededRandom(symbolSeed * 5.7);
             const macdSeed = seededRandom(symbolSeed * 6.1);
+            const momentumSeed = seededRandom(symbolSeed * 6.3);
+            const trendSeed = seededRandom(symbolSeed * 6.7);
+            const volumeTrendSeed = seededRandom(symbolSeed * 7.1);
 
             const rsi = 25 + rsiSeed * 50; // 25-75 RSI
             const sma20 = stockData.price * (0.92 + sma20Seed * 0.16);
@@ -2404,6 +2407,11 @@
                 upper: stockData.price * 1.05,
                 lower: stockData.price * 0.95
             };
+
+            // Calculate missing technical indicators
+            const priceMomentum = (momentumSeed - 0.5) * 20; // -10% to +10% momentum
+            const trendStrength = Math.abs((sma20 - sma50) / sma50 * 100); // Trend strength percentage
+            const volumeTrend = (volumeTrendSeed - 0.5) * 40; // -20% to +20% volume trend
 
             return {
                 symbol: symbol,
@@ -2419,12 +2427,17 @@
                 risk_factors: riskFactors,
                 original_prediction: isExtremePrediction ? parseFloat(originalChange.toFixed(2)) : null,
                 technical_indicators: {
+                    current_price: parseFloat(stockData.price.toFixed(2)),
                     rsi: parseFloat(rsi.toFixed(2)),
                     sma_20: parseFloat(sma20.toFixed(2)),
                     sma_50: parseFloat(sma50.toFixed(2)),
-                    macd: parseFloat(macd.toFixed(2)),
+                    macd: parseFloat(macd.toFixed(4)),
+                    price_momentum: parseFloat(priceMomentum.toFixed(2)),
+                    trend_strength: parseFloat(trendStrength.toFixed(2)),
+                    volume_trend: parseFloat(volumeTrend.toFixed(1)),
                     bollinger_upper: parseFloat(bollinger.upper.toFixed(2)),
                     bollinger_lower: parseFloat(bollinger.lower.toFixed(2)),
+                    volume: stockData.volume || 1000000,
                     volatility: parseFloat((volatility * 100).toFixed(2))
                 },
                 historical_data: generateHistoricalData(symbol, stockData.price),

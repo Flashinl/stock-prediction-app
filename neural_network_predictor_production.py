@@ -243,6 +243,28 @@ class NeuralNetworkStockPredictor:
                 volatility = 0.02
         except:
             volatility = 0.02
+
+        # Trend strength with error handling
+        try:
+            if len(close) > 50:
+                trend_strength_calc = abs((sma_20 - sma_50) / sma_50 * 100) if sma_50 > 0 else 0
+                trend_strength = trend_strength_calc if not pd.isna(trend_strength_calc) else 0.0
+            else:
+                trend_strength = 0.0
+        except:
+            trend_strength = 0.0
+
+        # Volume trend with error handling
+        try:
+            if len(volume) > 10:
+                recent_avg_volume = volume.rolling(window=10).mean().iloc[-1]
+                older_avg_volume = volume.rolling(window=10).mean().iloc[-11] if len(volume) > 20 else recent_avg_volume
+                volume_trend_calc = ((recent_avg_volume - older_avg_volume) / older_avg_volume * 100) if older_avg_volume > 0 else 0
+                volume_trend = volume_trend_calc if not pd.isna(volume_trend_calc) else 0.0
+            else:
+                volume_trend = 0.0
+        except:
+            volume_trend = 0.0
         
         # Original algorithm scoring components (for compatibility)
         rsi_score = 15 if rsi < 30 else (-15 if rsi > 70 else 0)
@@ -293,6 +315,8 @@ class NeuralNetworkStockPredictor:
             'bb_lower': bb_lower,
             'bb_position': bb_position,
             'price_momentum': price_momentum,
+            'trend_strength': trend_strength,
+            'volume_trend': volume_trend,
             'volatility': volatility,
             
             # Original algorithm scoring components
@@ -532,15 +556,18 @@ class NeuralNetworkStockPredictor:
                 'timeframe': final_timeframe,
                 'model_type': 'Neural Network (97.5% accuracy)',
                 'technical_indicators': {
+                    'current_price': float(round(current_price, 2)),
                     'rsi': float(round(features.get('rsi', 50), 2)),
                     'sma_20': float(round(features.get('sma_20', current_price), 2)),
                     'sma_50': float(round(features.get('sma_50', current_price), 2)),
-                    'macd': float(round(features.get('macd', 0), 2)),
+                    'macd': float(round(features.get('macd', 0), 4)),
+                    'price_momentum': float(round(features.get('price_momentum', 0), 2)),
+                    'trend_strength': float(round(features.get('trend_strength', 0), 2)),
+                    'volume_trend': float(round(features.get('volume_trend', 0), 1)),
                     'bollinger_upper': float(round(features.get('bb_upper', current_price * 1.05), 2)),
                     'bollinger_lower': float(round(features.get('bb_lower', current_price * 0.95), 2)),
                     'volume': int(features.get('volume', 0)),
-                    'volatility': float(round(features.get('volatility', 0.2) * 100, 2)),
-                    'current_price': float(round(current_price, 2))
+                    'volatility': float(round(features.get('volatility', 0.2) * 100, 2))
                 },
                 'historical_data': convert_numpy_types(historical_data),
                 'prediction_data': convert_numpy_types(prediction_data),

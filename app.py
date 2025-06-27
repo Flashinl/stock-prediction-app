@@ -767,7 +767,11 @@ class OriginalStockPredictor_BACKUP:
                 'bollinger_upper': current_price * 1.05,
                 'bollinger_lower': current_price * 0.95,
                 'volatility': 2.0,
-                'volume': 1000000
+                'volume': 1000000,
+                'avg_volume': 1000000,
+                'volume_trend': 0.0,
+                'price_momentum': 0.0,
+                'trend_strength': 2.0
             }
     
     def predict_stock_movement(self, symbol, timeframe_override=None):
