@@ -345,23 +345,75 @@ class NeuralNetworkStockPredictor:
             # Get additional info
             ticker = yf.Ticker(symbol)
             info = ticker.info
+            hist = ticker.history(period="1y")
+
+            # Extract company information
+            company_name = info.get('longName', info.get('shortName', symbol))
+            exchange = info.get('exchange', 'NASDAQ')
+            industry = info.get('industry', 'Unknown')
+            market_cap = info.get('marketCap', 0)
+            is_penny_stock = current_price < 5.0
+
+            # Generate historical and prediction data for charts
+            historical_data = self._generate_historical_data(hist, symbol)
+            prediction_data = self._generate_prediction_data(current_price, expected_change, timeframe)
+            volume_data = self._generate_volume_data(hist)
+
+            # Convert numpy types to Python native types for JSON serialization
+            def convert_numpy_types(obj):
+                """Convert numpy types to Python native types"""
+                import numpy as np
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                elif isinstance(obj, np.floating):
+                    return float(obj)
+                elif isinstance(obj, np.bool_):
+                    return bool(obj)
+                elif isinstance(obj, dict):
+                    return {k: convert_numpy_types(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_numpy_types(item) for item in obj]
+                return obj
 
             result = {
                 'symbol': symbol,
-                'prediction': prediction_label,
-                'confidence': round(confidence, 1),
-                'expected_change_percent': round(expected_change, 2),
-                'target_price': round(target_price, 2),
-                'current_price': round(current_price, 2),
-                'timeframe': timeframe_override or timeframe,
+                'company_name': company_name,
+                'exchange': exchange,
+                'industry': industry,
                 'sector': info.get('sector', 'Unknown'),
-                'category': features.get('stock_category', 'unknown'),
+                'market_cap': int(market_cap) if market_cap else 0,
+                'is_penny_stock': bool(is_penny_stock),
+                'stock_category': features.get('stock_category', 'unknown'),
+                'prediction': prediction_label,
+                'confidence': float(round(confidence, 1)),
+                'expected_change_percent': float(round(expected_change, 2)),
+                'target_price': float(round(target_price, 2)),
+                'current_price': float(round(current_price, 2)),
+                'timeframe': timeframe_override or timeframe,
                 'model_type': 'Neural Network (97.5% accuracy)',
+                'technical_indicators': {
+                    'rsi': float(round(features.get('rsi', 50), 2)),
+                    'sma_20': float(round(features.get('sma_20', current_price), 2)),
+                    'sma_50': float(round(features.get('sma_50', current_price), 2)),
+                    'macd': float(round(features.get('macd', 0), 2)),
+                    'bollinger_upper': float(round(features.get('bb_upper', current_price * 1.05), 2)),
+                    'bollinger_lower': float(round(features.get('bb_lower', current_price * 0.95), 2)),
+                    'volume': int(features.get('volume', 0)),
+                    'volatility': float(round(features.get('volatility', 0.2) * 100, 2)),
+                    'current_price': float(round(current_price, 2))
+                },
+                'historical_data': convert_numpy_types(historical_data),
+                'prediction_data': convert_numpy_types(prediction_data),
+                'volume_data': convert_numpy_types(volume_data),
+                'analysis_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'prediction_probabilities': {
-                    'confidence_score': round(confidence, 1),
+                    'confidence_score': float(round(confidence, 1)),
                     'model_certainty': 'High' if confidence > 80 else ('Medium' if confidence > 60 else 'Low')
                 }
             }
+
+            # Apply numpy conversion to entire result to ensure no numpy types remain
+            result = convert_numpy_types(result)
 
             # Cache the result
             self._prediction_cache[cache_key] = (result, current_time)
@@ -439,6 +491,82 @@ class NeuralNetworkStockPredictor:
         except Exception as e:
             logger.error(f"Error in fallback prediction: {e}")
             return {'error': 'Prediction failed'}
+
+    def _generate_historical_data(self, hist, symbol):
+        """Generate historical price data for charts"""
+        try:
+            if hist.empty:
+                return []
+
+            # Get last 30 days of data for chart
+            recent_hist = hist.tail(30)
+            historical_data = []
+
+            for i, (date, row) in enumerate(recent_hist.iterrows()):
+                historical_data.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'price': round(row['Close'], 2),
+                    'volume': int(row['Volume'])
+                })
+
+            return historical_data
+        except Exception as e:
+            logger.error(f"Error generating historical data: {e}")
+            return []
+
+    def _generate_prediction_data(self, current_price, expected_change, timeframe):
+        """Generate prediction data for charts"""
+        try:
+            target_price = current_price * (1 + expected_change / 100)
+
+            # Generate future prediction points
+            prediction_data = []
+            days_ahead = 90 if '3-6' in timeframe else (180 if '6-12' in timeframe else 60)
+
+            for i in range(1, days_ahead + 1):
+                # Gradual progression to target price with some volatility
+                progress = i / days_ahead
+                price_change = expected_change * progress
+                predicted_price = current_price * (1 + price_change / 100)
+
+                # Add some realistic volatility
+                volatility = 0.02 * (1 - progress)  # Less volatility as we approach target
+                import random
+                random.seed(hash(f"{current_price}_{i}") % 2147483647)  # Deterministic randomness
+                noise = (random.random() - 0.5) * volatility * predicted_price
+                predicted_price += noise
+
+                future_date = datetime.now() + timedelta(days=i)
+                prediction_data.append({
+                    'date': future_date.strftime('%Y-%m-%d'),
+                    'price': round(predicted_price, 2)
+                })
+
+            return prediction_data
+        except Exception as e:
+            logger.error(f"Error generating prediction data: {e}")
+            return []
+
+    def _generate_volume_data(self, hist):
+        """Generate volume data for charts"""
+        try:
+            if hist.empty:
+                return []
+
+            # Get last 30 days of volume data
+            recent_hist = hist.tail(30)
+            volume_data = []
+
+            for date, row in recent_hist.iterrows():
+                volume_data.append({
+                    'date': date.strftime('%Y-%m-%d'),
+                    'volume': int(row['Volume'])
+                })
+
+            return volume_data
+        except Exception as e:
+            logger.error(f"Error generating volume data: {e}")
+            return []
 
     def _cleanup_cache(self):
         """Clean up expired cache entries"""

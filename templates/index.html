@@ -3318,11 +3318,11 @@
                     if (result && result.prediction) {
                         const { symbol, prediction } = result;
 
-                        // Balanced filtering for quality growth opportunities
+                        // More aggressive filtering for growth opportunities (including hidden gems)
                         if (!prediction.error &&
-                            prediction.expected_change_percent >= 6 && // Meaningful growth threshold
-                            prediction.confidence >= 60 && // Reasonable confidence requirement
-                            (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG'))) { // Remove SPECULATIVE from main filter
+                            prediction.expected_change_percent >= 4 && // Lower growth threshold for more opportunities
+                            prediction.confidence >= 50 && // Lower confidence requirement for growth stocks
+                            (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG') || prediction.prediction.includes('SPECULATIVE'))) { // Include SPECULATIVE for growth
                             const safetyScore = calculateSafetyScore(prediction);
                             const growthScore = calculateGrowthScore(prediction);
                             const hiddenGemScore = calculateHiddenGemScore(prediction);
@@ -3373,9 +3373,9 @@
                             if (response.ok) {
                                 const prediction = await response.json();
                                 if (!prediction.error &&
-                                    prediction.expected_change_percent >= 5 && // Maintain quality threshold
-                                    prediction.confidence >= 55 && // Reasonable confidence for backup
-                                    (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG'))) { // Focus on quality BUY signals
+                                    prediction.expected_change_percent >= 3 && // Lower threshold for backup opportunities
+                                    prediction.confidence >= 45 && // Lower confidence for more opportunities
+                                    (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG') || prediction.prediction.includes('SPECULATIVE'))) { // Include SPECULATIVE for backup
 
                                     const safetyScore = calculateSafetyScore(prediction);
                                     const growthScore = calculateGrowthScore(prediction);
@@ -3888,7 +3888,7 @@
             }
 
             // Always add fundamental analysis factor
-            const pe = stockData?.pe || 25;
+            const pe = data?.pe || stockDatabase[data.symbol]?.pe || 25;
             if (pe < 20) {
                 reasoningFactors.push({
                     title: "💰 Attractive Valuation",
