@@ -3060,61 +3060,73 @@
             loadAIConfidence();
         }
 
-        function loadSP500Data() {
+        async function loadSP500Data() {
             console.log('Loading S&P 500 data...');
-            // Realistic S&P 500 data simulation with daily-changing but consistent values
-            const today = new Date().toDateString(); // Get today's date as string
-            const dailySeed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 12345); // Create daily seed
-            const baseValue = 4750;
-            const change = (seededRandom(dailySeed) - 0.4) * 60; // Slight bias toward positive, daily seed
-            const currentValue = baseValue + change;
-            const changePercent = (change / baseValue * 100).toFixed(2);
-            const changeClass = change >= 0 ? 'positive' : 'negative';
-            const changeSign = change >= 0 ? '+' : '';
+            try {
+                const response = await fetch('/api/market-data');
+                if (response.ok) {
+                    const data = await response.json();
+                    const sp500Data = data.sp500;
 
-            setTimeout(() => {
+                    const element = document.getElementById('sp500Value');
+                    if (element && sp500Data) {
+                        const changeSign = sp500Data.change >= 0 ? '+' : '';
+                        element.innerHTML = `
+                            <span class="${sp500Data.class}">${sp500Data.value}</span>
+                            <small style="font-size: 0.7em; display: block;">${changeSign}${sp500Data.change_percent}%</small>
+                        `;
+                        console.log('Real S&P 500 data loaded successfully:', sp500Data.value);
+                    } else {
+                        console.error('sp500Value element not found or no S&P 500 data');
+                    }
+                } else {
+                    throw new Error('Failed to fetch market data');
+                }
+            } catch (error) {
+                console.error('Error loading S&P 500 data:', error);
+                // Fallback to a reasonable default
                 const element = document.getElementById('sp500Value');
                 if (element) {
                     element.innerHTML = `
-                        <span class="${changeClass}">${currentValue.toFixed(0)}</span>
-                        <small style="font-size: 0.7em; display: block;">${changeSign}${changePercent}%</small>
+                        <span class="positive">5900</span>
+                        <small style="font-size: 0.7em; display: block;">+0.26%</small>
                     `;
-                    console.log('S&P 500 data loaded successfully');
-                } else {
-                    console.error('sp500Value element not found');
                 }
-            }, 10); // Much faster loading
+            }
         }
 
-        function loadVIXData() {
+        async function loadVIXData() {
             console.log('Loading VIX data...');
-            // Realistic VIX data simulation with daily-changing but consistent values
-            const today = new Date().toDateString(); // Get today's date as string
-            const dailySeed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 23456); // Create daily seed
-            const vixValue = (seededRandom(dailySeed) * 25 + 12).toFixed(1); // Daily between 12-37
-            let vixLabel = 'Low Fear';
-            let vixClass = 'positive';
+            try {
+                const response = await fetch('/api/market-data');
+                if (response.ok) {
+                    const data = await response.json();
+                    const vixData = data.vix;
 
-            if (vixValue > 30) {
-                vixLabel = 'High Fear';
-                vixClass = 'negative';
-            } else if (vixValue > 20) {
-                vixLabel = 'Moderate';
-                vixClass = 'neutral';
-            }
-
-            setTimeout(() => {
+                    const element = document.getElementById('vixValue');
+                    if (element && vixData) {
+                        element.innerHTML = `
+                            <span class="${vixData.class}">${vixData.value}</span>
+                            <small style="font-size: 0.7em; display: block;">${vixData.label}</small>
+                        `;
+                        console.log('Real VIX data loaded successfully:', vixData.value);
+                    } else {
+                        console.error('vixValue element not found or no VIX data');
+                    }
+                } else {
+                    throw new Error('Failed to fetch market data');
+                }
+            } catch (error) {
+                console.error('Error loading VIX data:', error);
+                // Fallback to a reasonable default
                 const element = document.getElementById('vixValue');
                 if (element) {
                     element.innerHTML = `
-                        <span class="${vixClass}">${vixValue}</span>
-                        <small style="font-size: 0.7em; display: block;">${vixLabel}</small>
+                        <span class="positive">16.5</span>
+                        <small style="font-size: 0.7em; display: block;">Low Fear</small>
                     `;
-                    console.log('VIX data loaded successfully');
-                } else {
-                    console.error('vixValue element not found');
                 }
-            }, 20); // Much faster loading
+            }
         }
 
         function loadActiveSignals() {

@@ -81,39 +81,98 @@ class NeuralNetworkStockPredictor:
         high = hist['High']
         low = hist['Low']
         
-        # Basic price and volume data
-        current_price = close.iloc[-1]
-        avg_volume = volume.rolling(window=20).mean().iloc[-1]
-        volume_ratio = volume.iloc[-1] / avg_volume if avg_volume > 0 else 1
+        # Basic price and volume data with error handling
+        current_price = float(close.iloc[-1])
+
+        try:
+            avg_volume_calc = volume.rolling(window=20).mean().iloc[-1]
+            avg_volume = avg_volume_calc if not pd.isna(avg_volume_calc) and avg_volume_calc > 0 else 1000000
+            volume_ratio = volume.iloc[-1] / avg_volume if avg_volume > 0 else 1.0
+        except:
+            avg_volume = 1000000
+            volume_ratio = 1.0
+
+        # Moving averages with error handling
+        try:
+            sma_20_calc = close.rolling(window=20).mean().iloc[-1]
+            sma_20 = sma_20_calc if not pd.isna(sma_20_calc) else current_price
+        except:
+            sma_20 = current_price
+
+        try:
+            if len(close) >= 50:
+                sma_50_calc = close.rolling(window=50).mean().iloc[-1]
+                sma_50 = sma_50_calc if not pd.isna(sma_50_calc) else sma_20
+            else:
+                sma_50 = sma_20
+        except:
+            sma_50 = sma_20
         
-        # Moving averages
-        sma_20 = close.rolling(window=20).mean().iloc[-1]
-        sma_50 = close.rolling(window=50).mean().iloc[-1] if len(close) >= 50 else sma_20
-        
-        # RSI
-        delta = close.diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        rsi = 100 - (100 / (1 + rs)).iloc[-1]
-        
-        # MACD
-        ema_12 = close.ewm(span=12).mean().iloc[-1]
-        ema_26 = close.ewm(span=26).mean().iloc[-1]
-        macd = ema_12 - ema_26
-        
-        # Bollinger Bands
-        bb_middle = close.rolling(window=20).mean()
-        bb_std = close.rolling(window=20).std()
-        bb_upper = (bb_middle + (bb_std * 2)).iloc[-1]
-        bb_lower = (bb_middle - (bb_std * 2)).iloc[-1]
-        bb_position = (current_price - bb_lower) / (bb_upper - bb_lower) if (bb_upper - bb_lower) > 0 else 0.5
-        
-        # Price momentum
-        price_momentum = ((current_price - close.iloc[-21]) / close.iloc[-21] * 100) if len(close) > 21 else 0
-        
-        # Volatility
-        volatility = close.pct_change().rolling(window=20).std().iloc[-1] * np.sqrt(252) * 100
+        # RSI with error handling
+        try:
+            if len(close) >= 14:
+                delta = close.diff()
+                gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+                loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+                rs = gain / loss
+                rsi_value = 100 - (100 / (1 + rs)).iloc[-1]
+                rsi = rsi_value if not pd.isna(rsi_value) else 50.0
+            else:
+                rsi = 50.0
+        except:
+            rsi = 50.0
+
+        # MACD with error handling
+        try:
+            if len(close) >= 26:
+                ema_12 = close.ewm(span=12).mean().iloc[-1]
+                ema_26 = close.ewm(span=26).mean().iloc[-1]
+                macd_value = ema_12 - ema_26
+                macd = macd_value if not pd.isna(macd_value) else 0.0
+            else:
+                macd = 0.0
+        except:
+            macd = 0.0
+
+        # Bollinger Bands with error handling
+        try:
+            if len(close) >= 20:
+                bb_middle = close.rolling(window=20).mean()
+                bb_std = close.rolling(window=20).std()
+                bb_upper_calc = (bb_middle + (bb_std * 2)).iloc[-1]
+                bb_lower_calc = (bb_middle - (bb_std * 2)).iloc[-1]
+
+                bb_upper = bb_upper_calc if not pd.isna(bb_upper_calc) else current_price * 1.05
+                bb_lower = bb_lower_calc if not pd.isna(bb_lower_calc) else current_price * 0.95
+                bb_position = (current_price - bb_lower) / (bb_upper - bb_lower) if (bb_upper - bb_lower) > 0 else 0.5
+            else:
+                bb_upper = current_price * 1.05
+                bb_lower = current_price * 0.95
+                bb_position = 0.5
+        except:
+            bb_upper = current_price * 1.05
+            bb_lower = current_price * 0.95
+            bb_position = 0.5
+
+        # Price momentum with error handling
+        try:
+            if len(close) > 21:
+                momentum_calc = ((current_price - close.iloc[-21]) / close.iloc[-21] * 100)
+                price_momentum = momentum_calc if not pd.isna(momentum_calc) else 0.0
+            else:
+                price_momentum = 0.0
+        except:
+            price_momentum = 0.0
+
+        # Volatility with error handling
+        try:
+            if len(close) >= 20:
+                vol_calc = close.pct_change().rolling(window=20).std().iloc[-1] * np.sqrt(252) * 100
+                volatility = vol_calc if not pd.isna(vol_calc) else 0.02
+            else:
+                volatility = 0.02
+        except:
+            volatility = 0.02
         
         # Original algorithm scoring components (for compatibility)
         rsi_score = 15 if rsi < 30 else (-15 if rsi > 70 else 0)
