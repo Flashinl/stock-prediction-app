@@ -116,12 +116,24 @@ class NeuralNetworkStockPredictor:
 
     def _parse_timeframe_to_days(self, timeframe_override):
         """Convert timeframe string to days"""
-        if not timeframe_override:
+        if not timeframe_override or timeframe_override == 'auto':
             return 90  # Default 3 months
 
         timeframe_lower = timeframe_override.lower()
 
-        if '1-2 month' in timeframe_lower or '1 month' in timeframe_lower:
+        # Handle frontend dropdown values
+        if timeframe_lower in ['1month', '1_month']:
+            return 30
+        elif timeframe_lower in ['3months', '3_months']:
+            return 90
+        elif timeframe_lower in ['6months', '6_months']:
+            return 180
+        elif timeframe_lower in ['1year', '1_year']:
+            return 365
+        elif timeframe_lower in ['2years', '2_years']:
+            return 730
+        # Handle AI-generated timeframe strings
+        elif '1-2 month' in timeframe_lower or '1 month' in timeframe_lower:
             return 45
         elif '2-3 month' in timeframe_lower or '3 month' in timeframe_lower:
             return 90
@@ -656,36 +668,37 @@ class NeuralNetworkStockPredictor:
             seed_value = hash(f"{current_price}_{expected_change}_{timeframe}") % 2147483647
             random.seed(seed_value)
 
-            # Generate realistic market movement with trends and volatility
-            for i in range(1, min(days_ahead + 1, 365)):  # Cap at 1 year for display
-                progress = i / days_ahead
+            # Generate realistic but smooth market movement
+            num_points = min(50, days_ahead // 3)  # Much fewer points for smoother chart
+            if num_points < 10:
+                num_points = 10
 
-                # Create S-curve progression (slow start, accelerate, then slow down)
-                s_curve_progress = 1 / (1 + math.exp(-6 * (progress - 0.5)))
+            for i in range(num_points):
+                progress = i / (num_points - 1)
+                days_from_now = progress * days_ahead
+
+                # Create smooth S-curve progression
+                s_curve_progress = 1 / (1 + math.exp(-4 * (progress - 0.5)))  # Gentler curve
 
                 # Base price progression using S-curve
                 base_price_change = expected_change * s_curve_progress
                 predicted_price = current_price * (1 + base_price_change / 100)
 
-                # Add realistic market volatility using actual stock volatility
-                daily_volatility = volatility / math.sqrt(252)  # Convert annual to daily
-                weekly_trend = math.sin(i / 7 * math.pi) * 0.005  # Weekly cycles
-                monthly_trend = math.sin(i / 30 * math.pi) * 0.01  # Monthly cycles
+                # Add controlled volatility (much smaller)
+                daily_volatility = min(volatility / math.sqrt(252), 0.02)  # Cap volatility
 
-                # Random daily movement (scaled down for realism)
-                daily_noise = (random.random() - 0.5) * daily_volatility * predicted_price * 0.3
+                # Gentle random movement
+                random_factor = (random.random() - 0.5) * 2  # -1 to 1
+                noise = predicted_price * daily_volatility * random_factor * 0.1  # Very small noise
 
-                # Trend components (scaled down)
-                trend_component = (weekly_trend + monthly_trend) * predicted_price * 0.5
+                # Apply minimal volatility
+                predicted_price += noise
 
-                # Apply volatility and trends
-                predicted_price += daily_noise + trend_component
+                # Keep prices within tight bounds for realism
+                predicted_price = max(predicted_price, current_price * 0.8)  # Max 20% drop
+                predicted_price = min(predicted_price, current_price * 1.3)  # Max 30% gain
 
-                # Ensure price stays within reasonable bounds
-                predicted_price = max(predicted_price, current_price * 0.5)  # No more than 50% drop
-                predicted_price = min(predicted_price, current_price * 2.0)  # No more than 100% gain
-
-                future_date = datetime.now() + timedelta(days=i)
+                future_date = datetime.now() + timedelta(days=days_from_now)
                 prediction_data.append({
                     'date': future_date.strftime('%Y-%m-%d'),
                     'price': round(predicted_price, 2)
