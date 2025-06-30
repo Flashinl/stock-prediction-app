@@ -1905,6 +1905,11 @@
             'IWM': { name: 'iShares Russell 2000 ETF', price: 225.80, sector: 'ETF', marketCap: '85B', volume: 28000000, pe: 45.2, beta: 1.25 }
         };
 
+        // Daily cache for opportunities to avoid repeated analysis
+        let opportunitiesCache = null;
+        let cacheTimestamp = null;
+        const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours cache (once per day)
+
         // Authentication system
         let currentUser = localStorage.getItem('currentUser');
         if (currentUser) {
@@ -3261,6 +3266,14 @@
         async function generateFeaturedOpportunities() {
             console.log('Generating featured opportunities...');
 
+            // Check daily cache first
+            const now = Date.now();
+            if (opportunitiesCache && cacheTimestamp && (now - cacheTimestamp) < CACHE_DURATION) {
+                console.log('Using cached daily opportunities');
+                displayFeaturedOpportunities(opportunitiesCache);
+                return;
+            }
+
             // Show loading state
             const grid = document.getElementById('featuredGrid');
             grid.innerHTML = `
@@ -3271,48 +3284,52 @@
             `;
 
             // High-Growth Opportunities & Emerging Leaders (Expanded for Better Growth Potential)
+            // Get ALL stocks from database and organize by potential
+            console.log('Fetching all stocks from database for systematic analysis...');
+            let allStocks = [];
+            try {
+                const response = await fetch('/api/stocks/all?limit=1000');
+                if (response.ok) {
+                    const stocksData = await response.json();
+                    allStocks = stocksData.stocks;
+                    console.log(`Found ${allStocks.length} stocks in database for analysis`);
+                } else {
+                    console.error('Failed to fetch stocks from database');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error fetching stocks:', error);
+                return;
+            }
+
+            // Organize stocks by categories for systematic analysis
+            const largeCapStocks = allStocks.filter(s => s.market_cap > 10000000000).map(s => s.symbol);
+            const midCapStocks = allStocks.filter(s => s.market_cap > 2000000000 && s.market_cap <= 10000000000).map(s => s.symbol);
+            const smallCapStocks = allStocks.filter(s => s.market_cap <= 2000000000).map(s => s.symbol);
+
+            // Create systematic selection for diverse analysis
             const stockCandidates = [
-                // AI & Machine Learning Leaders
-                'NVDA', 'AMD', 'PLTR', 'C3AI', 'AI', 'SOUN', 'BBAI', 'UPST', 'PATH', 'SMCI', 'AVGO', 'MRVL', 'QCOM', 'INTC',
-                // Quantum Computing & Advanced Tech
-                'IBM', 'GOOGL', 'IONQ', 'RGTI', 'QUBT', 'ARQQ', 'QMCO', 'QTUM', 'MVIS', 'LAZR', 'VLDR', 'OUST', 'LIDR', 'AEYE',
-                // Space Technology & Aerospace
-                'RKLB', 'SPCE', 'ASTR', 'PL', 'IRDM', 'MAXR', 'SATS', 'LUNR', 'VORB', 'ASTS', 'GSAT', 'BA', 'LMT', 'RTX',
-                // Cybersecurity & Data Protection
-                'CRWD', 'ZS', 'NET', 'PANW', 'FTNT', 'CYBR', 'OKTA', 'S', 'TENB', 'VRNS', 'FEYE', 'CHKP', 'QLYS', 'RPD',
-                // Biotech & Gene Therapy Innovation
-                'MRNA', 'BNTX', 'CRSP', 'EDIT', 'BEAM', 'NTLA', 'BLUE', 'SGMO', 'FATE', 'VCYT', 'PACB', 'ILMN', 'NVTA', 'CDNA',
-                // Electric Vehicles & Battery Tech
-                'TSLA', 'RIVN', 'LCID', 'NIO', 'XPEV', 'LI', 'CHPT', 'BLNK', 'QS', 'SLDP', 'BYDDY', 'GOEV', 'RIDE', 'NKLA',
-                // Fintech & Digital Banking Disruptors
-                'SOFI', 'AFRM', 'HOOD', 'SQ', 'COIN', 'PYPL', 'ADYEN', 'LC', 'UPST', 'BILL', 'PAYO', 'STNE', 'NU', 'OPEN',
-                // Cloud Computing & SaaS Growth
-                'SNOW', 'DDOG', 'MDB', 'ESTC', 'SPLK', 'NOW', 'WDAY', 'TEAM', 'ATLASSIAN', 'ZM', 'DOCU', 'TWLO', 'HUBS', 'ZI',
-                // Gaming & Metaverse
-                'RBLX', 'U', 'EA', 'TTWO', 'ATVI', 'DKNG', 'PENN', 'SKLZ', 'SLGG', 'GMBL', 'FUBO', 'NFLX', 'DIS', 'META',
-                // Clean Energy & Sustainability
-                'ENPH', 'SEDG', 'PLUG', 'FCEL', 'BE', 'NOVA', 'RUN', 'SPWR', 'MAXN', 'CSIQ', 'JKS', 'ARRY', 'VSLR', 'SUNW',
-                // E-commerce & Digital Platforms
-                'SHOP', 'ETSY', 'CHWY', 'ROKU', 'SPOT', 'PINS', 'SNAP', 'UBER', 'LYFT', 'DASH', 'ABNB', 'BKNG', 'EXPE', 'TRIP',
-                // Healthcare Technology & Telemedicine
-                'TDOC', 'VEEV', 'DXCM', 'ISRG', 'PODD', 'TMDX', 'OMCL', 'IRTC', 'ONEM', 'AMWL', 'HIMS', 'DOCS', 'ACCD', 'WELL',
-                // Emerging Growth & Small-Cap Innovators
-                'PTON', 'LMND', 'ROOT', 'MTCH', 'BMBL', 'YELP', 'W', 'FTCH', 'RH', 'CVNA', 'CARG', 'RDFN', 'ZILLOW', 'OPENDOOR',
-                // International Growth & Emerging Markets
-                'BABA', 'JD', 'PDD', 'BIDU', 'SE', 'MELI', 'GLOB', 'CPNG', 'GRAB', 'BEKE', 'TME', 'BILI', 'VIPS', 'TCOM'
+                ...largeCapStocks.slice(0, 15),  // Top 15 large caps
+                ...midCapStocks.slice(0, 8),     // Top 8 mid caps
+                ...smallCapStocks.slice(0, 7)    // Top 7 small caps
             ];
 
             const candidates = [];
 
             try {
-                // Analyze fewer stocks concurrently for faster loading
-                const selectedStocks = stockCandidates.slice(0, 8); // Reduced from 15 to 8 for faster loading
+                // Analyze all selected stocks systematically
+                const selectedStocks = stockCandidates; // Analyze all systematically selected stocks
                 console.log(`Analyzing ${selectedStocks.length} stocks concurrently...`);
 
-                // Make concurrent API calls instead of sequential
+                // Make concurrent API calls with timeout for faster response
                 const promises = selectedStocks.map(async (symbol) => {
                     try {
                         console.log(`Fetching prediction for ${symbol}...`);
+
+                        // Add timeout to prevent hanging
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
                         const response = await fetch('/api/predict', {
                             method: 'POST',
                             headers: {
@@ -3321,8 +3338,11 @@
                             body: JSON.stringify({
                                 symbol: symbol,
                                 timeframe: 'auto'
-                            })
+                            }),
+                            signal: controller.signal
                         });
+
+                        clearTimeout(timeoutId);
 
                         if (response.ok) {
                             const prediction = await response.json();
@@ -3330,12 +3350,16 @@
                             return { symbol, prediction };
                         }
                     } catch (error) {
-                        console.error(`Error fetching ${symbol}:`, error);
+                        if (error.name === 'AbortError') {
+                            console.log(`Timeout for ${symbol}, skipping...`);
+                        } else {
+                            console.error(`Error fetching ${symbol}:`, error);
+                        }
                     }
                     return null;
                 });
 
-                // Wait for all predictions to complete
+                // Wait for all predictions to complete with overall timeout
                 const results = await Promise.all(promises);
 
                 // Process results
@@ -3343,11 +3367,11 @@
                     if (result && result.prediction) {
                         const { symbol, prediction } = result;
 
-                        // More aggressive filtering for growth opportunities (including hidden gems)
+                        // Realistic filtering for top opportunities
                         if (!prediction.error &&
-                            prediction.expected_change_percent >= 4 && // Lower growth threshold for more opportunities
-                            prediction.confidence >= 50 && // Lower confidence requirement for growth stocks
-                            (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG') || prediction.prediction.includes('SPECULATIVE'))) { // Include SPECULATIVE for growth
+                            prediction.expected_change_percent >= 3 && // Minimum 3% growth for opportunities
+                            prediction.confidence >= 50 && // Reasonable confidence level
+                            (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG'))) { // Only BUY recommendations
                             const safetyScore = calculateSafetyScore(prediction);
                             const growthScore = calculateGrowthScore(prediction);
                             const hiddenGemScore = calculateHiddenGemScore(prediction);
@@ -3382,30 +3406,24 @@
 
                 console.log(`Total candidates found: ${candidates.length}`);
 
-                // If we don't have enough candidates, expand search for growth opportunities
-                if (candidates.length < 6) {
-                    console.log('Not enough candidates, expanding search for growth opportunities...');
-                    // Try more stocks with growth-focused criteria
-                    for (let i = 15; i < Math.min(25, stockCandidates.length); i++) {
-                        const symbol = stockCandidates[i];
-                        try {
-                            const response = await fetch('/api/predict', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ symbol: symbol, timeframe: 'auto' })
-                            });
+                // If no candidates meet strict criteria, lower the bar to find some opportunities
+                if (candidates.length < 3) {
+                    console.log('Not enough strict candidates, expanding criteria...');
+                    for (const result of results) {
+                        if (result && result.prediction) {
+                            const { symbol, prediction } = result;
 
-                            if (response.ok) {
-                                const prediction = await response.json();
-                                if (!prediction.error &&
-                                    prediction.expected_change_percent >= 3 && // Lower threshold for backup opportunities
-                                    prediction.confidence >= 45 && // Lower confidence for more opportunities
-                                    (prediction.prediction.includes('BUY') || prediction.prediction.includes('STRONG') || prediction.prediction.includes('SPECULATIVE'))) { // Include SPECULATIVE for backup
+                            // More lenient filtering to ensure we find opportunities
+                            if (!prediction.error &&
+                                prediction.expected_change_percent >= 1 && // Lower growth threshold
+                                prediction.confidence >= 40 && // Lower confidence threshold
+                                (prediction.prediction.includes('BUY') || prediction.prediction.includes('HOLD'))) { // Include HOLD
 
+                                if (!candidates.some(c => c.symbol === symbol)) {
                                     const safetyScore = calculateSafetyScore(prediction);
                                     const growthScore = calculateGrowthScore(prediction);
                                     const hiddenGemScore = calculateHiddenGemScore(prediction);
-                                    const overallScore = (safetyScore * 0.25) + (growthScore * 0.55) + (hiddenGemScore * 0.2); // Balanced weighting
+                                    const overallScore = (safetyScore * 0.25) + (growthScore * 0.55) + (hiddenGemScore * 0.2);
 
                                     candidates.push({
                                         symbol: prediction.symbol,
@@ -3427,100 +3445,70 @@
                                         },
                                         reasoning: generateOpportunityReasoning(prediction)
                                     });
+                                    console.log(`Added backup candidate ${symbol}`);
+
+                                    if (candidates.length >= 6) break;
                                 }
                             }
-                        } catch (error) {
-                            console.error(`Error with backup symbol ${symbol}:`, error);
-                        }
-
-                        // Add delay between backup requests
-                        if (i < Math.min(24, stockCandidates.length - 1)) {
-                            await new Promise(resolve => setTimeout(resolve, 150)); // Faster delay for more stocks
                         }
                     }
                 }
 
-                // Sort by overall score (safety + growth) and take top 6
+                console.log(`Found ${candidates.length} total opportunities from AI analysis`);
+
+                // Sort by overall score and ensure sector diversity
                 candidates.sort((a, b) => b.analysis.overallScore - a.analysis.overallScore);
-                const topOpportunities = candidates.slice(0, 6);
+
+                // Ensure sector diversity: max 3 AI/Tech stocks, at least 3 from other sectors
+                const diverseOpportunities = [];
+                let aiTechCount = 0;
+                const maxAITechStocks = 3;
+
+                // Define AI/Tech stocks more precisely
+                const aiTechSymbols = ['NVDA', 'AMD', 'PLTR', 'IONQ', 'QUBT', 'RGTI', 'BBAI', 'SOUN', 'PATH', 'SMCI'];
+
+                for (const candidate of candidates) {
+                    const isAITech = aiTechSymbols.includes(candidate.symbol) ||
+                                   candidate.symbol.includes('AI') ||
+                                   (candidate.data.sector === 'Technology' &&
+                                    (candidate.symbol.includes('AI') || candidate.data.name.toLowerCase().includes('artificial intelligence')));
+
+                    if (isAITech && aiTechCount >= maxAITechStocks) {
+                        continue; // Skip if we already have enough AI/tech stocks
+                    }
+
+                    diverseOpportunities.push(candidate);
+                    if (isAITech) aiTechCount++;
+
+                    console.log(`Added ${candidate.symbol} (${candidate.data.sector}) - AI/Tech: ${isAITech}`);
+
+                    if (diverseOpportunities.length >= 6) break; // Limit to 6 total opportunities
+                }
+
+                const topOpportunities = diverseOpportunities;
 
                 console.log('Final top opportunities:', topOpportunities);
 
-                // If still no opportunities, show hidden gem fallback recommendations
-                if (topOpportunities.length === 0) {
-                    console.log('No opportunities found, showing hidden gem fallback recommendations...');
-                    const fallbackOpportunities = [
-                        {
-                            symbol: 'PLTR',
-                            data: { name: 'Palantir Technologies', price: 28.50, sector: 'Technology' },
-                            analysis: { upside: 18.5, confidence: 68, prediction: 'SPECULATIVE BUY', timeframe: '3-6 months' },
-                            reasoning: 'AI data analytics pioneer with government contracts'
-                        },
-                        {
-                            symbol: 'SOFI',
-                            data: { name: 'SoFi Technologies', price: 12.25, sector: 'Financial Services' },
-                            analysis: { upside: 22.3, confidence: 65, prediction: 'BUY', timeframe: '6-12 months' },
-                            reasoning: 'Digital banking disruptor with strong user growth'
-                        },
-                        {
-                            symbol: 'ENPH',
-                            data: { name: 'Enphase Energy', price: 145.80, sector: 'Clean Energy' },
-                            analysis: { upside: 15.7, confidence: 72, prediction: 'BUY', timeframe: '3-9 months' },
-                            reasoning: 'Solar microinverter leader in growing renewable market'
-                        },
-                        {
-                            symbol: 'NVDA',
-                            data: { name: 'NVIDIA Corporation', price: 875.50, sector: 'Technology' },
-                            analysis: { upside: 28.8, confidence: 78, prediction: 'STRONG BUY', timeframe: '6-12 months' },
-                            reasoning: 'AI chip leader driving the artificial intelligence revolution'
-                        },
-                        {
-                            symbol: 'RKLB',
-                            data: { name: 'Rocket Lab USA', price: 8.90, sector: 'Space Technology' },
-                            analysis: { upside: 42.4, confidence: 63, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
-                            reasoning: 'Small satellite launch leader in rapidly growing space economy'
-                        },
-                        {
-                            symbol: 'IONQ',
-                            data: { name: 'IonQ Inc.', price: 12.40, sector: 'Quantum Computing' },
-                            analysis: { upside: 35.7, confidence: 58, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
-                            reasoning: 'Quantum computing pioneer with breakthrough technology'
-                        },
-                        {
-                            symbol: 'CRSP',
-                            data: { name: 'CRISPR Therapeutics', price: 68.90, sector: 'Biotech' },
-                            analysis: { upside: 32.2, confidence: 62, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
-                            reasoning: 'Gene editing technology leader with breakthrough therapies'
-                        }
-                    ];
-                    displayFeaturedOpportunities(fallbackOpportunities);
-                } else {
-                    displayFeaturedOpportunities(topOpportunities);
-                }
+                // Use only real AI analysis results
+                const finalOpportunities = topOpportunities;
+
+                // Cache the results for 24 hours
+                opportunitiesCache = finalOpportunities;
+                cacheTimestamp = Date.now();
+
+                console.log(`Cached ${finalOpportunities.length} opportunities for 24 hours`);
+                displayFeaturedOpportunities(finalOpportunities);
             } catch (error) {
                 console.error('Error generating featured opportunities:', error);
-                // Show high-growth fallback even on error
-                const fallbackOpportunities = [
-                    {
-                        symbol: 'NVDA',
-                        data: { name: 'NVIDIA Corporation', price: 875.50, sector: 'Technology' },
-                        analysis: { upside: 28.8, confidence: 78, prediction: 'STRONG BUY', timeframe: '6-12 months' },
-                        reasoning: 'AI chip leader driving the artificial intelligence revolution'
-                    },
-                    {
-                        symbol: 'PLTR',
-                        data: { name: 'Palantir Technologies', price: 28.50, sector: 'Technology' },
-                        analysis: { upside: 32.5, confidence: 68, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
-                        reasoning: 'AI data analytics pioneer expanding into commercial markets'
-                    },
-                    {
-                        symbol: 'RKLB',
-                        data: { name: 'Rocket Lab USA', price: 8.90, sector: 'Space Technology' },
-                        analysis: { upside: 42.4, confidence: 63, prediction: 'SPECULATIVE BUY', timeframe: '6-12 months' },
-                        reasoning: 'Small satellite launch leader in rapidly growing space economy'
-                    }
-                ];
-                displayFeaturedOpportunities(fallbackOpportunities);
+                // Show error message instead of fake data
+                const grid = document.getElementById('featuredGrid');
+                grid.innerHTML = `
+                    <div style="text-align: center; color: #888; padding: 40px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 10px; color: #ff6b6b;"></i>
+                        <p>Unable to load opportunities at this time.</p>
+                        <p style="font-size: 0.9em;">Please try refreshing the page or check individual stocks.</p>
+                    </div>
+                `;
             }
         }
 
