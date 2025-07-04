@@ -1,0 +1,36 @@
+# Google Cloud Build configuration for ASL-to-Text AI
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/asl-to-text-ai', '.']
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/asl-to-text-ai']
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+    - 'run'
+    - 'deploy'
+    - 'asl-to-text-ai'
+    - '--image'
+    - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/asl-to-text-ai'
+    - '--region'
+    - 'us-central1'
+    - '--platform'
+    - 'managed'
+    - '--memory'
+    - '2Gi'
+    - '--cpu'
+    - '2'
+    - '--port'
+    - '8080'
+    - '--allow-unauthenticated'
+    - '--max-instances'
+    - '10'
+    - '--timeout'
+    - '300'
+
+images:
+  - 'us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/asl-to-text-ai'
