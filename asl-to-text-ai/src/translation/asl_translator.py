@@ -10,7 +10,7 @@ from collections import deque
 import json
 from pathlib import Path
 
-from ..models.asl_detector import ASLDetector
+from ..models.production_asl_detector import ProductionASLDetector
 from ..utils.config import TRANSLATION_CONFIG, MODEL_CONFIG
 from .vocabulary import ASLVocabulary
 from .grammar_processor import GrammarProcessor
@@ -32,7 +32,7 @@ class ASLTranslator:
             vocabulary_path: Path to the ASL vocabulary database
         """
         # Initialize components
-        self.detector = ASLDetector(model_path)
+        self.detector = ProductionASLDetector(model_path)
         self.vocabulary = ASLVocabulary(vocabulary_path)
         self.grammar_processor = GrammarProcessor()
         

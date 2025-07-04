@@ -75,12 +75,23 @@ else:
     }
 
 def initialize_translator():
-    """Initialize the ASL translator with default models."""
+    """Initialize the ASL translator with advanced models."""
     global translator
     try:
-        # Initialize with error handling for cloud deployment
-        translator = ASLTranslator()
-        logger.info("ASL Translator initialized successfully")
+        # Look for production model
+        model_path = None
+        production_model_dir = Path(__file__).parent.parent / "models" / "production"
+
+        if production_model_dir.exists():
+            # Look for model file
+            model_files = list(production_model_dir.glob("*.h5")) + list(production_model_dir.glob("final_model.h5"))
+            if model_files:
+                model_path = str(model_files[0])
+                logger.info(f"Found production model: {model_path}")
+
+        # Initialize with advanced model or demo mode
+        translator = ASLTranslator(model_path=model_path)
+        logger.info("Advanced ASL Translator initialized successfully")
         return True
     except ImportError as e:
         logger.warning(f"ML dependencies not available: {e}")
@@ -88,7 +99,12 @@ def initialize_translator():
         return False
     except Exception as e:
         logger.error(f"Failed to initialize translator: {e}")
-        return False
+        logger.info("Falling back to demo mode")
+        try:
+            translator = ASLTranslator()  # Demo mode
+            return True
+        except:
+            return False
 
 @app.route('/')
 def index():

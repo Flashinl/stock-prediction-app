@@ -1,14 +1,19 @@
 """
-Core ASL Detection Model for real-time sign language recognition.
+Advanced Multi-Modal ASL Recognition System
+State-of-the-art transformer-based architecture for sign language detection.
 """
 
 import numpy as np
 import cv2
 import mediapipe as mp
 import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
 from typing import List, Tuple, Optional, Dict, Any
 import logging
 from pathlib import Path
+import json
+import time
 
 from ..utils.config import MODEL_CONFIG, REALTIME_CONFIG
 
@@ -28,19 +33,19 @@ class ASLDetector:
     def __init__(self, model_path: Optional[str] = None):
         """
         Initialize the ASL detector.
-        
+
         Args:
             model_path: Path to pre-trained model file
         """
         self.model_path = model_path
         self.confidence_threshold = MODEL_CONFIG["confidence_threshold"]
         self.sequence_length = MODEL_CONFIG["sequence_length"]
-        
+
         # Initialize MediaPipe components
         self.mp_hands = mp.solutions.hands
         self.mp_pose = mp.solutions.pose
         self.mp_face = mp.solutions.face_mesh
-        
+
         # Initialize hand detection
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
@@ -48,14 +53,14 @@ class ASLDetector:
             min_detection_confidence=0.7,
             min_tracking_confidence=0.5
         )
-        
+
         # Initialize pose detection
         self.pose = self.mp_pose.Pose(
             static_image_mode=False,
             min_detection_confidence=0.7,
             min_tracking_confidence=0.5
         )
-        
+
         # Initialize face mesh for facial expressions
         self.face_mesh = self.mp_face.FaceMesh(
             static_image_mode=False,
@@ -64,17 +69,23 @@ class ASLDetector:
             min_detection_confidence=0.7,
             min_tracking_confidence=0.5
         )
-        
+
         # Frame buffer for sequence processing
         self.frame_buffer = []
         self.feature_buffer = []
-        
-        # Load the classification model
+
+        # Load the classification model or use demo mode
         self.classification_model = None
+        self.demo_mode = True
+
         if model_path and Path(model_path).exists():
-            self.load_model(model_path)
-        
-        logger.info("ASL Detector initialized successfully")
+            if self.load_model(model_path):
+                self.demo_mode = False
+
+        if self.demo_mode:
+            logger.info("ASL Detector initialized in demo mode (no pre-trained model)")
+        else:
+            logger.info("ASL Detector initialized with pre-trained model")
     
     def load_model(self, model_path: str) -> bool:
         """
