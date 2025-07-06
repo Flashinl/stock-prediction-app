@@ -1,15 +1,15 @@
-# Core ML and Computer Vision (Advanced Training)
-tensorflow==2.15.0
+# Core ML and Computer Vision (Cloud Run Compatible)
+tensorflow-cpu==2.13.0
 opencv-python-headless==4.8.1.78
 mediapipe==0.10.7
 numpy==1.24.3
 scipy==1.11.4
 
-# Advanced Training Dependencies
-albumentations==1.3.1
-wandb==0.16.0
-tensorboard==2.15.1
-keras-tuner==1.4.6
+# Advanced Training Dependencies (Optional)
+# albumentations==1.3.1
+# wandb==0.16.0
+# tensorboard==2.13.1
+# keras-tuner==1.4.6
 
 # Web Framework and API
 flask==2.3.3

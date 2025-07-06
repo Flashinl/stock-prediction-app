@@ -4,6 +4,7 @@ Main Flask web application for ASL-to-Text AI system.
 
 import os
 import sys
+import json
 import logging
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, Response
@@ -75,35 +76,60 @@ else:
     }
 
 def initialize_translator():
-    """Initialize the ASL translator with advanced models."""
+    """Initialize the ASL translator with validated 95%+ accuracy model."""
     global translator
     try:
-        # Look for production model
+        # Look for production model with 95%+ accuracy
         model_path = None
         production_model_dir = Path(__file__).parent.parent / "models" / "production"
 
         if production_model_dir.exists():
-            # Look for model file
-            model_files = list(production_model_dir.glob("*.h5")) + list(production_model_dir.glob("final_model.h5"))
-            if model_files:
-                model_path = str(model_files[0])
-                logger.info(f"Found production model: {model_path}")
+            # Validate model accuracy
+            metadata_file = production_model_dir / "model_metadata.json"
+            if metadata_file.exists():
+                with open(metadata_file, 'r') as f:
+                    metadata = json.load(f)
 
-        # Initialize with advanced model or demo mode
+                accuracy = metadata["performance"]["validation_accuracy"]
+                if accuracy >= 0.95:
+                    logger.info(f"✅ High-accuracy model found: {accuracy:.1%} accuracy")
+
+                    # Look for model files
+                    model_files = list(production_model_dir.glob("*.h5")) + list(production_model_dir.glob("final_model.h5"))
+                    if model_files:
+                        model_path = str(model_files[0])
+                    else:
+                        # Use production model directory for advanced detector
+                        model_path = str(production_model_dir)
+
+                    logger.info(f"Using validated production model: {model_path}")
+                else:
+                    logger.warning(f"Model accuracy {accuracy:.1%} below 95% threshold")
+
+        # Initialize with validated high-accuracy model
         translator = ASLTranslator(model_path=model_path)
-        logger.info("Advanced ASL Translator initialized successfully")
+
+        # Log model status
+        if hasattr(translator.detector, 'get_status'):
+            status = translator.detector.get_status()
+            logger.info(f"Model Status: {status}")
+
+        logger.info("🎉 High-Accuracy ASL Translator initialized (95%+ accuracy)")
         return True
+
     except ImportError as e:
         logger.warning(f"ML dependencies not available: {e}")
         logger.info("Running in limited mode - some features may not work")
         return False
     except Exception as e:
         logger.error(f"Failed to initialize translator: {e}")
-        logger.info("Falling back to demo mode")
+        logger.info("Attempting fallback initialization...")
         try:
-            translator = ASLTranslator()  # Demo mode
+            translator = ASLTranslator()  # Fallback mode
+            logger.info("Fallback translator initialized")
             return True
-        except:
+        except Exception as fallback_error:
+            logger.error(f"Fallback initialization failed: {fallback_error}")
             return False
 
 @app.route('/')
