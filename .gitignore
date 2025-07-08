@@ -1,7 +1,6 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
 .Python
 build/
@@ -19,49 +18,101 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
 # Virtual environments
-.env
-.venv
-env/
 venv/
+venv_*/
 ENV/
-env.bak/
-venv.bak/
+env/
+
+# Data and models - NEVER COMMIT
+data/
+datasets/
+models/
+instance/
+results/
+temp/
+tmp/
+cache/
+downloads/
+
+# ASL specific
+asl-to-text-ai/data/
+asl-to-text-ai/models/
+
+# Large files
+*.npy
+*.npz
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.pb
+*.tflite
+*.onnx
+*.db
+*.sqlite
+*.sqlite3
+
+# Media files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.mp3
+*.wav
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.bz2
+*.rar
+*.7z
+
+# Large text files
+*.csv
+*.tsv
+*.json
+*.xml
+*.yaml
+*.yml
+
+# Logs
+*.log
+logs/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
-# Logs
-*.log
+# Kaggle
+kaggle.json
+.kaggle/
 
-# Environment variables
-.env.local
-.env.production
+# Jupyter
+.ipynb_checkpoints/
 
-# Flask
-instance/
-.webassets-cache
-
-# Coverage reports
-htmlcov/
-.coverage
-.coverage.*
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
+# Specific problematic directories
+wlasl_extracted/
+kaggle_download/
+frames/
+videos/
