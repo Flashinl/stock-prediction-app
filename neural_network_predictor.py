@@ -1,25 +1,66 @@
 """
-Neural Network Stock Prediction Model
+Neural Network Stock Prediction Model (PyTorch)
 Integrates technical indicators with fundamental analysis factors
 """
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader, TensorDataset
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import joblib
 import logging
 from datetime import datetime
 import yfinance as yf
 from app import db, Stock
+import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Set device
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+logger.info(f"Using device: {device}")
+
+class StockNeuralNetwork(nn.Module):
+    """PyTorch Neural Network for Stock Prediction"""
+
+    def __init__(self, input_dim, num_classes=5):
+        super(StockNeuralNetwork, self).__init__()
+
+        self.network = nn.Sequential(
+            # Input layer with dropout for regularization
+            nn.Linear(input_dim, 256),
+            nn.ReLU(),
+            nn.BatchNorm1d(256),
+            nn.Dropout(0.3),
+
+            # Hidden layers with decreasing size
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.BatchNorm1d(128),
+            nn.Dropout(0.3),
+
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.BatchNorm1d(64),
+            nn.Dropout(0.2),
+
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+
+            # Output layer for 5 classes
+            nn.Linear(32, num_classes)
+        )
+
+    def forward(self, x):
+        return self.network(x)
 
 class StockNeuralNetworkPredictor:
     def __init__(self):
@@ -28,6 +69,7 @@ class StockNeuralNetworkPredictor:
         self.label_encoder = LabelEncoder()
         self.feature_names = []
         self.is_trained = False
+        self.device = device
         
     def extract_features(self, symbol):
         """Extract comprehensive features for a stock symbol"""
@@ -74,8 +116,10 @@ class StockNeuralNetworkPredictor:
         # Moving averages (EXACT match from original)
         sma_20 = close.rolling(window=20).mean().iloc[-1]
         sma_50 = close.rolling(window=50).mean().iloc[-1]
-        ema_12 = close.ewm(span=12).mean().iloc[-1]
-        ema_26 = close.ewm(span=26).mean().iloc[-1]
+        ema_12_series = close.ewm(span=12).mean()
+        ema_26_series = close.ewm(span=26).mean()
+        ema_12 = ema_12_series.iloc[-1]
+        ema_26 = ema_26_series.iloc[-1]
 
         # RSI (EXACT match from original)
         delta = close.diff()
@@ -85,9 +129,11 @@ class StockNeuralNetworkPredictor:
         rsi = 100 - (100 / (1 + rs)).iloc[-1]
 
         # MACD (EXACT match from original)
-        macd = ema_12 - ema_26
-        macd_signal = macd.ewm(span=9).mean().iloc[-1]
-        macd_histogram = (macd - macd.ewm(span=9).mean()).iloc[-1]
+        macd_series = ema_12_series - ema_26_series
+        macd = macd_series.iloc[-1]
+        macd_signal_series = macd_series.ewm(span=9).mean()
+        macd_signal = macd_signal_series.iloc[-1]
+        macd_histogram = (macd_series - macd_signal_series).iloc[-1]
 
         # Bollinger Bands (EXACT match from original)
         bb_middle = close.rolling(window=20).mean()
@@ -142,10 +188,10 @@ class StockNeuralNetworkPredictor:
 
         # MACD scoring (EXACT from original algorithm)
         macd_score = 0
-        if macd.iloc[-1] > 0:
-            macd_score = min(10, abs(macd.iloc[-1]) * 2)
+        if macd > 0:
+            macd_score = min(10, abs(macd) * 2)
         else:
-            macd_score = -min(10, abs(macd.iloc[-1]) * 2)
+            macd_score = -min(10, abs(macd) * 2)
 
         # Price momentum scoring (EXACT from original algorithm)
         momentum_score = 0
@@ -184,7 +230,7 @@ class StockNeuralNetworkPredictor:
 
         # MACD strong positive momentum
         macd_momentum_bonus = 0
-        if macd.iloc[-1] > 1.0:
+        if macd > 1.0:
             macd_momentum_bonus = 3
 
         # Calculate total technical score (EXACT from original algorithm)
@@ -231,7 +277,7 @@ class StockNeuralNetworkPredictor:
             'ema_12': ema_12,
             'ema_26': ema_26,
             'rsi': rsi,
-            'macd': macd.iloc[-1],
+            'macd': macd,
             'macd_signal': macd_signal,
             'macd_histogram': macd_histogram,
             'bb_upper': bb_upper,
@@ -269,7 +315,7 @@ class StockNeuralNetworkPredictor:
             'is_sma20_above_sma50': 1 if sma_20 > sma_50 else 0,
             'is_rsi_oversold': 1 if rsi < 30 else 0,
             'is_rsi_overbought': 1 if rsi > 70 else 0,
-            'is_macd_positive': 1 if macd.iloc[-1] > 0 else 0,
+            'is_macd_positive': 1 if macd > 0 else 0,
             'is_high_volume': 1 if volume_ratio > 1.5 else 0,
             'is_bb_oversold': 1 if bb_position < 0.2 else 0,
             'is_bb_overbought': 1 if bb_position > 0.8 else 0
@@ -384,22 +430,22 @@ class StockNeuralNetworkPredictor:
         # Base confidence by category (from original algorithm)
         if features['market_cap'] > 10_000_000_000:  # Large cap
             features['base_confidence'] = 0.85
-            features['stock_category'] = 'large_cap'
+            stock_category = 'large_cap'
         elif features['market_cap'] > 2_000_000_000:  # Mid cap
             features['base_confidence'] = 0.75
-            features['stock_category'] = 'mid_cap'
+            stock_category = 'mid_cap'
         elif features['market_cap'] > 300_000_000:  # Small cap
             features['base_confidence'] = 0.65
-            features['stock_category'] = 'small_cap'
+            stock_category = 'small_cap'
         elif stock.current_price >= 5.0:  # Micro cap
             features['base_confidence'] = 0.50
-            features['stock_category'] = 'micro_cap'
+            stock_category = 'micro_cap'
         elif stock.current_price >= 1.0:  # Penny stock
             features['base_confidence'] = 0.35
-            features['stock_category'] = 'penny'
+            stock_category = 'penny'
         else:  # Micro penny
             features['base_confidence'] = 0.25
-            features['stock_category'] = 'micro_penny'
+            stock_category = 'micro_penny'
 
         # Beta confidence adjustment (from original algorithm)
         beta = features['beta']
@@ -423,12 +469,12 @@ class StockNeuralNetworkPredictor:
             features['fcf_yield'] = 0
 
         # === STOCK CATEGORY BINARY FEATURES ===
-        features['is_large_cap'] = 1 if features['stock_category'] == 'large_cap' else 0
-        features['is_mid_cap'] = 1 if features['stock_category'] == 'mid_cap' else 0
-        features['is_small_cap'] = 1 if features['stock_category'] == 'small_cap' else 0
-        features['is_micro_cap'] = 1 if features['stock_category'] == 'micro_cap' else 0
-        features['is_penny_stock'] = 1 if features['stock_category'] == 'penny' else 0
-        features['is_micro_penny'] = 1 if features['stock_category'] == 'micro_penny' else 0
+        features['is_large_cap'] = 1 if stock_category == 'large_cap' else 0
+        features['is_mid_cap'] = 1 if stock_category == 'mid_cap' else 0
+        features['is_small_cap'] = 1 if stock_category == 'small_cap' else 0
+        features['is_micro_cap'] = 1 if stock_category == 'micro_cap' else 0
+        features['is_penny_stock'] = 1 if stock_category == 'penny' else 0
+        features['is_micro_penny'] = 1 if stock_category == 'micro_penny' else 0
 
         # === SECTOR BINARY FEATURES ===
         major_sectors = ['Technology', 'Healthcare', 'Financial Services', 'Consumer Discretionary',
@@ -499,91 +545,68 @@ class StockNeuralNetworkPredictor:
     def prepare_training_data(self, symbols_list, lookback_days=90):
         """Prepare training data by collecting features and labels for multiple stocks"""
         logger.info(f"Preparing training data for {len(symbols_list)} symbols")
-        
+
         training_data = []
         labels = []
-        
-        for symbol in symbols_list:
-            try:
-                logger.info(f"Processing {symbol}...")
-                
-                # Get current features
-                features = self.extract_features(symbol)
-                if features is None:
+
+        # Import app here to avoid circular imports
+        from app import app
+
+        with app.app_context():
+            for symbol in symbols_list:
+                try:
+                    logger.info(f"Processing {symbol}...")
+
+                    # Get current features
+                    features = self.extract_features(symbol)
+                    if features is None:
+                        continue
+
+                    # Get historical price data to create labels
+                    ticker = yf.Ticker(symbol)
+                    hist = ticker.history(period="6mo")  # Get 6 months of data
+
+                    if len(hist) < lookback_days + 30:  # Need enough data for lookback + future
+                        continue
+
+                    # Create labels based on future price movement (30 days ahead)
+                    for i in range(len(hist) - lookback_days - 30):
+                        current_price = hist['Close'].iloc[i + lookback_days]
+                        future_price = hist['Close'].iloc[i + lookback_days + 30]
+
+                        price_change = (future_price - current_price) / current_price * 100
+
+                        # Create classification labels
+                        if price_change > 8:
+                            label = 'STRONG_BUY'  # >8% gain
+                        elif price_change > 3:
+                            label = 'BUY'  # 3-8% gain
+                        elif price_change > -3:
+                            label = 'HOLD'  # -3% to 3%
+                        elif price_change > -8:
+                            label = 'SELL'  # -8% to -3% loss
+                        else:
+                            label = 'STRONG_SELL'  # >8% loss
+
+                        training_data.append(features)
+                        labels.append(label)
+
+                except Exception as e:
+                    logger.error(f"Error processing {symbol}: {e}")
                     continue
-                
-                # Get historical price data to create labels
-                ticker = yf.Ticker(symbol)
-                hist = ticker.history(period="6mo")  # Get 6 months of data
-                
-                if len(hist) < lookback_days + 30:  # Need enough data for lookback + future
-                    continue
-                
-                # Create labels based on future price movement (30 days ahead)
-                for i in range(len(hist) - lookback_days - 30):
-                    current_price = hist['Close'].iloc[i + lookback_days]
-                    future_price = hist['Close'].iloc[i + lookback_days + 30]
-                    
-                    price_change = (future_price - current_price) / current_price * 100
-                    
-                    # Create classification labels
-                    if price_change > 8:
-                        label = 'STRONG_BUY'  # >8% gain
-                    elif price_change > 3:
-                        label = 'BUY'  # 3-8% gain
-                    elif price_change > -3:
-                        label = 'HOLD'  # -3% to 3%
-                    elif price_change > -8:
-                        label = 'SELL'  # -8% to -3% loss
-                    else:
-                        label = 'STRONG_SELL'  # >8% loss
-                    
-                    training_data.append(features)
-                    labels.append(label)
-                    
-            except Exception as e:
-                logger.error(f"Error processing {symbol}: {e}")
-                continue
-        
+
         logger.info(f"Collected {len(training_data)} training samples")
         return training_data, labels
 
     def build_model(self, input_dim):
-        """Build the neural network architecture"""
-        model = keras.Sequential([
-            # Input layer with dropout for regularization
-            layers.Dense(256, activation='relu', input_shape=(input_dim,)),
-            layers.BatchNormalization(),
-            layers.Dropout(0.3),
-
-            # Hidden layers with decreasing size
-            layers.Dense(128, activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.3),
-
-            layers.Dense(64, activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.2),
-
-            layers.Dense(32, activation='relu'),
-            layers.Dropout(0.2),
-
-            # Output layer for 5 classes (STRONG_BUY, BUY, HOLD, SELL, STRONG_SELL)
-            layers.Dense(5, activation='softmax')
-        ])
-
-        # Compile with appropriate loss function and metrics
-        model.compile(
-            optimizer=keras.optimizers.Adam(learning_rate=0.001),
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy', 'precision', 'recall']
-        )
-
+        """Build the PyTorch neural network"""
+        model = StockNeuralNetwork(input_dim, num_classes=5)
+        model = model.to(self.device)
         return model
 
-    def train(self, symbols_list, epochs=100, validation_split=0.2, save_model=True):
-        """Train the neural network model"""
-        logger.info("Starting neural network training...")
+    def train(self, symbols_list, epochs=100, validation_split=0.2, save_model=True, learning_rate=0.001):
+        """Train the PyTorch neural network model"""
+        logger.info("Starting PyTorch neural network training...")
 
         # Prepare training data
         training_data, labels = self.prepare_training_data(symbols_list)
@@ -596,6 +619,18 @@ class StockNeuralNetworkPredictor:
 
         # Handle missing values
         df = df.fillna(0)
+
+        # Check for non-numeric columns and convert them
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                logger.warning(f"Found non-numeric column: {col}, sample values: {df[col].head().tolist()}")
+                # Try to convert to numeric, if it fails, drop the column
+                try:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                    df[col] = df[col].fillna(0)
+                except:
+                    logger.warning(f"Dropping non-numeric column: {col}")
+                    df = df.drop(columns=[col])
 
         # Store feature names
         self.feature_names = df.columns.tolist()
@@ -613,141 +648,209 @@ class StockNeuralNetworkPredictor:
             X_scaled, y, test_size=0.2, random_state=42, stratify=y
         )
 
+        # Convert to PyTorch tensors
+        X_train_tensor = torch.FloatTensor(X_train).to(self.device)
+        y_train_tensor = torch.LongTensor(y_train).to(self.device)
+        X_test_tensor = torch.FloatTensor(X_test).to(self.device)
+        y_test_tensor = torch.LongTensor(y_test).to(self.device)
+
+        # Create data loaders
+        train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
+        train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+
         # Build model
         self.model = self.build_model(X_scaled.shape[1])
 
-        # Define callbacks
-        callbacks = [
-            keras.callbacks.EarlyStopping(
-                monitor='val_loss',
-                patience=15,
-                restore_best_weights=True
-            ),
-            keras.callbacks.ReduceLROnPlateau(
-                monitor='val_loss',
-                factor=0.5,
-                patience=10,
-                min_lr=0.0001
-            )
-        ]
+        # Define loss function and optimizer
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10, factor=0.5)
 
-        # Train the model
-        logger.info("Training neural network...")
-        history = self.model.fit(
-            X_train, y_train,
-            epochs=epochs,
-            batch_size=32,
-            validation_split=validation_split,
-            callbacks=callbacks,
-            verbose=1
-        )
+        # Training loop
+        logger.info("Training PyTorch neural network...")
+        best_accuracy = 0.0
+        patience_counter = 0
+        patience = 15
 
-        # Evaluate on test set
-        test_loss, test_accuracy, test_precision, test_recall = self.model.evaluate(X_test, y_test, verbose=0)
-        logger.info(f"Test Accuracy: {test_accuracy:.4f}")
-        logger.info(f"Test Precision: {test_precision:.4f}")
-        logger.info(f"Test Recall: {test_recall:.4f}")
+        for epoch in range(epochs):
+            # Training phase
+            self.model.train()
+            train_loss = 0.0
+            train_correct = 0
+            train_total = 0
+
+            for batch_X, batch_y in train_loader:
+                optimizer.zero_grad()
+                outputs = self.model(batch_X)
+                loss = criterion(outputs, batch_y)
+                loss.backward()
+                optimizer.step()
+
+                train_loss += loss.item()
+                _, predicted = torch.max(outputs.data, 1)
+                train_total += batch_y.size(0)
+                train_correct += (predicted == batch_y).sum().item()
+
+            # Validation phase
+            self.model.eval()
+            with torch.no_grad():
+                val_outputs = self.model(X_test_tensor)
+                val_loss = criterion(val_outputs, y_test_tensor)
+                _, val_predicted = torch.max(val_outputs.data, 1)
+                val_accuracy = (val_predicted == y_test_tensor).sum().item() / len(y_test_tensor)
+
+            train_accuracy = train_correct / train_total
+            avg_train_loss = train_loss / len(train_loader)
+
+            logger.info(f"Epoch {epoch+1}/{epochs}: "
+                       f"Train Loss: {avg_train_loss:.4f}, "
+                       f"Train Acc: {train_accuracy:.4f}, "
+                       f"Val Loss: {val_loss:.4f}, "
+                       f"Val Acc: {val_accuracy:.4f}")
+
+            # Learning rate scheduling
+            scheduler.step(val_loss)
+
+            # Early stopping
+            if val_accuracy > best_accuracy:
+                best_accuracy = val_accuracy
+                patience_counter = 0
+                # Save best model
+                if save_model:
+                    self.save_model()
+            else:
+                patience_counter += 1
+                if patience_counter >= patience:
+                    logger.info(f"Early stopping at epoch {epoch+1}")
+                    break
+
+        # Final evaluation
+        self.model.eval()
+        with torch.no_grad():
+            test_outputs = self.model(X_test_tensor)
+            _, test_predicted = torch.max(test_outputs.data, 1)
+            test_accuracy = accuracy_score(y_test, test_predicted.cpu().numpy())
+
+        logger.info(f"Final Test Accuracy: {test_accuracy:.4f}")
 
         # Generate classification report
-        y_pred = self.model.predict(X_test)
-        y_pred_classes = np.argmax(y_pred, axis=1)
-
         class_names = self.label_encoder.classes_
-        report = classification_report(y_test, y_pred_classes, target_names=class_names)
+        report = classification_report(y_test, test_predicted.cpu().numpy(), target_names=class_names)
         logger.info(f"Classification Report:\n{report}")
 
         # Confusion matrix
-        cm = confusion_matrix(y_test, y_pred_classes)
+        cm = confusion_matrix(y_test, test_predicted.cpu().numpy())
         logger.info(f"Confusion Matrix:\n{cm}")
 
         self.is_trained = True
 
-        # Save model and preprocessors
-        if save_model:
-            self.save_model()
-
-        return history
+        return {
+            'best_accuracy': best_accuracy,
+            'final_accuracy': test_accuracy,
+            'epochs_trained': epoch + 1
+        }
 
     def predict(self, symbol):
         """Make prediction for a single stock"""
         if not self.is_trained:
             raise ValueError("Model must be trained before making predictions")
 
-        # Extract features
-        features = self.extract_features(symbol)
-        if features is None:
-            return None
+        # Import app here to avoid circular imports
+        from app import app
 
-        # Convert to DataFrame and ensure same feature order
-        df = pd.DataFrame([features])
+        with app.app_context():
+            # Extract features
+            features = self.extract_features(symbol)
+            if features is None:
+                return None
 
-        # Add missing features with 0 values
-        for feature in self.feature_names:
-            if feature not in df.columns:
-                df[feature] = 0
+            # Convert to DataFrame and ensure same feature order
+            df = pd.DataFrame([features])
 
-        # Reorder columns to match training data
-        df = df[self.feature_names]
+            # Add missing features with 0 values
+            for feature in self.feature_names:
+                if feature not in df.columns:
+                    df[feature] = 0
 
-        # Handle missing values
-        df = df.fillna(0)
+            # Reorder columns to match training data
+            df = df[self.feature_names]
 
-        # Scale features
-        X_scaled = self.scaler.transform(df.values)
+            # Handle missing values
+            df = df.fillna(0)
 
-        # Make prediction
-        prediction_probs = self.model.predict(X_scaled, verbose=0)[0]
-        predicted_class_idx = np.argmax(prediction_probs)
-        predicted_class = self.label_encoder.classes_[predicted_class_idx]
-        confidence = prediction_probs[predicted_class_idx] * 100
+            # Scale features
+            X_scaled = self.scaler.transform(df.values)
 
-        # Get all class probabilities
-        class_probabilities = {}
-        for i, class_name in enumerate(self.label_encoder.classes_):
-            class_probabilities[class_name] = prediction_probs[i] * 100
+            # Convert to PyTorch tensor
+            X_tensor = torch.FloatTensor(X_scaled).to(self.device)
 
-        return {
-            'symbol': symbol,
-            'prediction': predicted_class,
-            'confidence': confidence,
-            'class_probabilities': class_probabilities,
-            'features_used': len(self.feature_names)
-        }
+            # Make prediction
+            self.model.eval()
+            with torch.no_grad():
+                outputs = self.model(X_tensor)
+                prediction_probs = torch.softmax(outputs, dim=1)[0]
+                predicted_class_idx = torch.argmax(prediction_probs).item()
+                predicted_class = self.label_encoder.classes_[predicted_class_idx]
+                confidence = prediction_probs[predicted_class_idx].item() * 100
 
-    def save_model(self, model_path='models/stock_nn_model.h5',
+            # Get all class probabilities
+            class_probabilities = {}
+            for i, class_name in enumerate(self.label_encoder.classes_):
+                class_probabilities[class_name] = prediction_probs[i].item() * 100
+
+            return {
+                'symbol': symbol,
+                'prediction': predicted_class,
+                'confidence': confidence,
+                'class_probabilities': class_probabilities,
+                'features_used': len(self.feature_names)
+            }
+
+    def save_model(self, model_path='models/stock_nn_model.pth',
                    scaler_path='models/stock_scaler.joblib',
                    encoder_path='models/stock_label_encoder.joblib'):
-        """Save the trained model and preprocessors"""
+        """Save the trained PyTorch model and preprocessors"""
         import os
         os.makedirs('models', exist_ok=True)
 
-        # Save model
-        self.model.save(model_path)
+        # Save PyTorch model
+        torch.save({
+            'model_state_dict': self.model.state_dict(),
+            'input_dim': len(self.feature_names),
+            'num_classes': len(self.label_encoder.classes_) if hasattr(self.label_encoder, 'classes_') else 5
+        }, model_path)
 
         # Save scaler and label encoder
         joblib.dump(self.scaler, scaler_path)
         joblib.dump(self.label_encoder, encoder_path)
         joblib.dump(self.feature_names, 'models/feature_names.joblib')
 
-        logger.info(f"Model saved to {model_path}")
+        logger.info(f"PyTorch model saved to {model_path}")
 
-    def load_model(self, model_path='models/stock_nn_model.h5',
+    def load_model(self, model_path='models/stock_nn_model.pth',
                    scaler_path='models/stock_scaler.joblib',
                    encoder_path='models/stock_label_encoder.joblib'):
-        """Load a pre-trained model and preprocessors"""
+        """Load a pre-trained PyTorch model and preprocessors"""
         try:
-            # Load model
-            self.model = keras.models.load_model(model_path)
-
-            # Load scaler and label encoder
+            # Load scaler and label encoder first
             self.scaler = joblib.load(scaler_path)
             self.label_encoder = joblib.load(encoder_path)
             self.feature_names = joblib.load('models/feature_names.joblib')
 
+            # Load PyTorch model
+            checkpoint = torch.load(model_path, map_location=self.device)
+            input_dim = checkpoint['input_dim']
+            num_classes = checkpoint['num_classes']
+
+            self.model = StockNeuralNetwork(input_dim, num_classes)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.model = self.model.to(self.device)
+            self.model.eval()
+
             self.is_trained = True
-            logger.info(f"Model loaded from {model_path}")
+            logger.info(f"PyTorch model loaded from {model_path}")
             return True
 
         except Exception as e:
-            logger.error(f"Error loading model: {e}")
+            logger.error(f"Error loading PyTorch model: {e}")
             return False
