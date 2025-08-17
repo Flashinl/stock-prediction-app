@@ -3165,14 +3165,23 @@ try:
                             volatility = 2.0
 
                         company_name = info.get('longName', symbol)
-                        sector = info.get('sector', 'Unknown')
+                        sector = info.get('sector') or ''
                         market_cap = info.get('marketCap', 0)
+                        exchange = info.get('exchange') or info.get('fullExchangeName') or ''
+                        industry = info.get('industry') or ''
+                        is_penny_stock = bool(current_price and current_price < 5)
+                        stock_category = (
+                            'large_cap' if market_cap and market_cap >= 10_000_000_000 else
+                            'mid_cap' if market_cap and market_cap >= 2_000_000_000 else
+                            'small_cap'
+                        )
+                        analysis_date = datetime.now().strftime('%Y-%m-%d')
 
                     except Exception as e:
                         logger.debug(f"Error getting stock info for {symbol}: {e}")
                         current_price = None
                         company_name = symbol
-                        sector = 'Unknown'
+                        sector = ''
                         market_cap = 0
                         volume = 0
                         rsi = 50
@@ -3185,6 +3194,11 @@ try:
                         bb_upper = None
                         bb_lower = None
                         volatility = 2.0
+                        exchange = ''
+                        industry = ''
+                        is_penny_stock = bool(current_price and current_price < 5)
+                        stock_category = 'small_cap'
+                        analysis_date = datetime.now().strftime('%Y-%m-%d')
 
                     # Calculate target price
                     target_price = current_price * (1 + expected_change / 100) if current_price else None
@@ -3208,6 +3222,11 @@ try:
                         'company_name': company_name,
                         'sector': sector,
                         'market_cap': market_cap,
+                        'exchange': exchange,
+                        'industry': industry,
+                        'is_penny_stock': is_penny_stock,
+                        'stock_category': stock_category,
+                        'analysis_date': analysis_date,
                         'model_type': 'kaggle_ensemble_100pct',
                         'technical_indicators': {
                             'volume': volume,
