@@ -21,6 +21,7 @@ import requests
 from alpha_vantage.timeseries import TimeSeries
 from alpha_vantage.fundamentaldata import FundamentalData
 import time
+from scipy import stats
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -2838,22 +2839,31 @@ try:
                 """Load stock data from Kaggle dataset"""
                 try:
                     file_path = os.path.join(self.kaggle_data_path, f"{symbol}.csv")
+                    logger.info(f"Kaggle predictor: Looking for file {file_path}")
+
                     if not os.path.exists(file_path):
+                        logger.info(f"Kaggle predictor: File not found {file_path}")
                         return None
 
                     df = pd.read_csv(file_path)
+                    logger.info(f"Kaggle predictor: Loaded {len(df)} rows for {symbol}")
+
                     required_cols = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
                     if not all(col in df.columns for col in required_cols):
+                        logger.info(f"Kaggle predictor: Missing required columns for {symbol}")
                         return None
 
                     df['Date'] = pd.to_datetime(df['Date'])
                     df = df.sort_values('Date')
 
                     if len(df) < 50:
+                        logger.info(f"Kaggle predictor: Not enough data for {symbol} ({len(df)} rows)")
                         return None
 
+                    logger.info(f"Kaggle predictor: Successfully loaded data for {symbol}")
                     return df
-                except:
+                except Exception as e:
+                    logger.info(f"Kaggle predictor: Error loading {symbol}: {e}")
                     return None
 
             def extract_features(self, df):
@@ -2958,13 +2968,18 @@ try:
             def predict(self, symbol):
                 """Make prediction for a stock"""
                 try:
+                    logger.info(f"Kaggle predictor: Loading data for {symbol}")
                     df = self.load_stock_data(symbol)
                     if df is None:
+                        logger.info(f"Kaggle predictor: No data found for {symbol}")
                         return None
 
+                    logger.info(f"Kaggle predictor: Extracting features for {symbol}")
                     features = self.extract_features(df)
                     if not features:
+                        logger.info(f"Kaggle predictor: Feature extraction failed for {symbol}")
                         return None
+                    logger.info(f"Kaggle predictor: Features extracted successfully for {symbol}")
 
                     # Convert to feature vector
                     feature_vector = []
@@ -2976,11 +2991,13 @@ try:
                             feature_vector.append(0.0)
 
                     # Apply feature selection and scaling
+                    logger.info(f"Kaggle predictor: Applying feature selection and scaling for {symbol}")
                     X = np.array([feature_vector])
                     X_selected = self.feature_selector.transform(X)
                     X_scaled = self.scalers['main'].transform(X_selected)
 
                     # Make prediction
+                    logger.info(f"Kaggle predictor: Making prediction for {symbol}")
                     if 'ensemble' in self.models:
                         model = self.models['ensemble']
                     else:
@@ -2990,7 +3007,9 @@ try:
                     probabilities = model.predict_proba(X_scaled)[0] if hasattr(model, 'predict_proba') else None
 
                     # Convert back to label
+                    logger.info(f"Kaggle predictor: Converting prediction to label for {symbol}")
                     predicted_label = self.label_encoder.inverse_transform([prediction])[0]
+                    logger.info(f"Kaggle predictor: Prediction result for {symbol}: {predicted_label}")
 
                     result = {
                         'symbol': symbol,
@@ -3003,8 +3022,10 @@ try:
                         classes = self.label_encoder.classes_
                         result['probabilities'] = dict(zip(classes, probabilities))
 
+                    logger.info(f"Kaggle predictor: Returning successful prediction for {symbol}")
                     return result
-                except:
+                except Exception as e:
+                    logger.info(f"Kaggle predictor: Exception during prediction for {symbol}: {e}")
                     return None
 
         kaggle_predictor = SimpleKagglePredictor()
@@ -3019,12 +3040,15 @@ try:
                 """Wrapper to match neural predictor interface"""
                 try:
                     # Get prediction from Kaggle model
+                    logger.info(f"KagglePredictorWrapper: Attempting prediction for {symbol}")
                     prediction = self.kaggle_predictor.predict(symbol)
 
                     if not prediction:
                         # Fallback to neural predictor if Kaggle data not available
-                        logger.debug(f"Kaggle data not available for {symbol}, using fallback prediction")
+                        logger.info(f"Kaggle data not available for {symbol}, using fallback prediction")
                         return self._fallback_prediction(symbol, timeframe_override)
+
+                    logger.info(f"Kaggle predictor successful for {symbol}: {prediction.get('prediction', 'N/A')}")
 
                     # Convert to expected format
                     pred_class = prediction['prediction']
@@ -3041,18 +3065,108 @@ try:
 
                     expected_change = change_mapping.get(pred_class, 2.0)
 
-                    # Get current price from yfinance
+                    # Get current price and technical indicators from yfinance
                     try:
                         import yfinance as yf
                         ticker = yf.Ticker(symbol)
                         info = ticker.info
-                        hist = ticker.history(period="1d")
+                        hist = ticker.history(period="3mo")  # Get more data for technical indicators
 
-                        current_price = float(hist['Close'].iloc[-1]) if not hist.empty else None
+                        if not hist.empty:
+                            current_price = float(hist['Close'].iloc[-1])
+                            volume = float(hist['Volume'].iloc[-1])
+
+                            # Calculate technical indicators
+                            close_prices = hist['Close'].values
+                            high_prices = hist['High'].values
+                            low_prices = hist['Low'].values
+                            volumes = hist['Volume'].values
+
+                            # RSI calculation
+                            if len(close_prices) >= 15:
+                                deltas = np.diff(close_prices[-15:])
+                                gains = np.where(deltas > 0, deltas, 0)
+                                losses = np.where(deltas < 0, -deltas, 0)
+                                avg_gain = np.mean(gains)
+                                avg_loss = np.mean(losses)
+                                if avg_loss > 0:
+                                    rs = avg_gain / avg_loss
+                                    rsi = 100 - (100 / (1 + rs))
+                                else:
+                                    rsi = 100
+                            else:
+                                rsi = 50
+
+                            # Moving averages
+                            sma_20 = np.mean(close_prices[-20:]) if len(close_prices) >= 20 else current_price
+                            sma_50 = np.mean(close_prices[-50:]) if len(close_prices) >= 50 else current_price
+
+                            # MACD (simplified)
+                            if len(close_prices) >= 26:
+                                ema_12 = pd.Series(close_prices).ewm(span=12).mean().iloc[-1]
+                                ema_26 = pd.Series(close_prices).ewm(span=26).mean().iloc[-1]
+                                macd = ema_12 - ema_26
+                                macd_signal = "BUY" if macd > 0 else "SELL"
+                            else:
+                                macd = 0
+                                macd_signal = "NEUTRAL"
+
+                            # Price momentum
+                            if len(close_prices) >= 10:
+                                price_momentum = ((current_price - close_prices[-10]) / close_prices[-10]) * 100
+                            else:
+                                price_momentum = 0
+
+                            # Trend strength
+                            if len(close_prices) >= 20:
+                                x = np.arange(20)
+                                y = close_prices[-20:]
+                                slope, _, r_value, _, _ = stats.linregress(x, y)
+                                trend_strength = abs(r_value) * 100
+                            else:
+                                trend_strength = 50
+
+                            # Volume trend
+                            if len(volumes) >= 10:
+                                recent_vol = np.mean(volumes[-5:])
+                                older_vol = np.mean(volumes[-10:-5])
+                                volume_trend = ((recent_vol - older_vol) / older_vol) * 100 if older_vol > 0 else 0
+                            else:
+                                volume_trend = 0
+
+                            # Bollinger Bands
+                            if len(close_prices) >= 20:
+                                sma_bb = np.mean(close_prices[-20:])
+                                std_bb = np.std(close_prices[-20:])
+                                bb_upper = sma_bb + (2 * std_bb)
+                                bb_lower = sma_bb - (2 * std_bb)
+                            else:
+                                bb_upper = current_price * 1.02
+                                bb_lower = current_price * 0.98
+
+                            # Volatility
+                            if len(close_prices) >= 20:
+                                volatility = (np.std(close_prices[-20:]) / np.mean(close_prices[-20:])) * 100
+                            else:
+                                volatility = 2.0
+
+                        else:
+                            current_price = None
+                            volume = 0
+                            rsi = 50
+                            sma_20 = None
+                            sma_50 = None
+                            macd_signal = "NEUTRAL"
+                            price_momentum = 0
+                            trend_strength = 50
+                            volume_trend = 0
+                            bb_upper = None
+                            bb_lower = None
+                            volatility = 2.0
+
                         company_name = info.get('longName', symbol)
                         sector = info.get('sector', 'Unknown')
                         market_cap = info.get('marketCap', 0)
-                        volume = float(hist['Volume'].iloc[-1]) if not hist.empty else 0
 
                     except Exception as e:
                         logger.debug(f"Error getting stock info for {symbol}: {e}")
@@ -3061,6 +3175,16 @@ try:
                         sector = 'Unknown'
                         market_cap = 0
                         volume = 0
+                        rsi = 50
+                        sma_20 = None
+                        sma_50 = None
+                        macd_signal = "NEUTRAL"
+                        price_momentum = 0
+                        trend_strength = 50
+                        volume_trend = 0
+                        bb_upper = None
+                        bb_lower = None
+                        volatility = 2.0
 
                     # Calculate target price
                     target_price = current_price * (1 + expected_change / 100) if current_price else None
@@ -3087,9 +3211,16 @@ try:
                         'model_type': 'kaggle_ensemble_100pct',
                         'technical_indicators': {
                             'volume': volume,
-                            'rsi': 50,  # Default values since Kaggle model handles this internally
-                            'sma_20': current_price,
-                            'sma_50': current_price
+                            'rsi': rsi,
+                            'sma_20': sma_20,
+                            'sma_50': sma_50,
+                            'macd_signal': macd_signal,
+                            'price_momentum': price_momentum,
+                            'trend_strength': trend_strength,
+                            'volume_trend': volume_trend,
+                            'bollinger_upper': bb_upper,
+                            'bollinger_lower': bb_lower,
+                            'volatility': volatility
                         },
                         'reasoning': f"Advanced ensemble model (100% accuracy) predicts {pred_class} with {confidence:.1f}% confidence based on comprehensive technical analysis."
                     }
@@ -3099,9 +3230,124 @@ try:
                     return self._fallback_prediction(symbol, timeframe_override)
 
             def _fallback_prediction(self, symbol, timeframe_override=None):
-                """Fallback prediction using neural predictor"""
+                """Enhanced fallback prediction with proper technical indicators"""
                 try:
-                    return neural_predictor.predict_stock_movement(symbol, timeframe_override)
+                    # Get enhanced prediction with proper technical indicators
+                    result = neural_predictor.predict_stock_movement(symbol, timeframe_override)
+
+                    # If the result doesn't have proper technical indicators, enhance them
+                    if result and 'technical_indicators' in result:
+                        tech_indicators = result['technical_indicators']
+
+                        # Check if indicators are missing or "N/A"
+                        if (tech_indicators.get('rsi') in [None, 'N/A'] or
+                            tech_indicators.get('sma_20') in [None, 'N/A']):
+
+                            # Calculate proper technical indicators using yfinance
+                            try:
+                                import yfinance as yf
+                                ticker = yf.Ticker(symbol)
+                                hist = ticker.history(period="3mo")
+
+                                if not hist.empty:
+                                    close_prices = hist['Close'].values
+                                    volumes = hist['Volume'].values
+                                    current_price = float(hist['Close'].iloc[-1])
+                                    volume = float(hist['Volume'].iloc[-1])
+
+                                    # Calculate RSI
+                                    if len(close_prices) >= 15:
+                                        deltas = np.diff(close_prices[-15:])
+                                        gains = np.where(deltas > 0, deltas, 0)
+                                        losses = np.where(deltas < 0, -deltas, 0)
+                                        avg_gain = np.mean(gains)
+                                        avg_loss = np.mean(losses)
+                                        if avg_loss > 0:
+                                            rs = avg_gain / avg_loss
+                                            rsi = 100 - (100 / (1 + rs))
+                                        else:
+                                            rsi = 100
+                                    else:
+                                        rsi = 50
+
+                                    # Moving averages
+                                    sma_20 = np.mean(close_prices[-20:]) if len(close_prices) >= 20 else current_price
+                                    sma_50 = np.mean(close_prices[-50:]) if len(close_prices) >= 50 else current_price
+
+                                    # MACD (simplified)
+                                    if len(close_prices) >= 26:
+                                        ema_12 = pd.Series(close_prices).ewm(span=12).mean().iloc[-1]
+                                        ema_26 = pd.Series(close_prices).ewm(span=26).mean().iloc[-1]
+                                        macd = ema_12 - ema_26
+                                        macd_signal = "BUY" if macd > 0 else "SELL"
+                                    else:
+                                        macd_signal = "NEUTRAL"
+
+                                    # Price momentum
+                                    if len(close_prices) >= 10:
+                                        price_momentum = ((current_price - close_prices[-10]) / close_prices[-10]) * 100
+                                    else:
+                                        price_momentum = 0
+
+                                    # Trend strength
+                                    if len(close_prices) >= 20:
+                                        x = np.arange(20)
+                                        y = close_prices[-20:]
+                                        slope, _, r_value, _, _ = stats.linregress(x, y)
+                                        trend_strength = abs(r_value) * 100
+                                    else:
+                                        trend_strength = 50
+
+                                    # Volume trend
+                                    if len(volumes) >= 10:
+                                        recent_vol = np.mean(volumes[-5:])
+                                        older_vol = np.mean(volumes[-10:-5])
+                                        volume_trend = ((recent_vol - older_vol) / older_vol) * 100 if older_vol > 0 else 0
+                                    else:
+                                        volume_trend = 0
+
+                                    # Bollinger Bands
+                                    if len(close_prices) >= 20:
+                                        sma_bb = np.mean(close_prices[-20:])
+                                        std_bb = np.std(close_prices[-20:])
+                                        bb_upper = sma_bb + (2 * std_bb)
+                                        bb_lower = sma_bb - (2 * std_bb)
+                                    else:
+                                        bb_upper = current_price * 1.02
+                                        bb_lower = current_price * 0.98
+
+                                    # Volatility
+                                    if len(close_prices) >= 20:
+                                        volatility = (np.std(close_prices[-20:]) / np.mean(close_prices[-20:])) * 100
+                                    else:
+                                        volatility = 2.0
+
+                                    # Update technical indicators
+                                    result['technical_indicators'] = {
+                                        'volume': volume,
+                                        'rsi': rsi,
+                                        'sma_20': sma_20,
+                                        'sma_50': sma_50,
+                                        'macd_signal': macd_signal,
+                                        'price_momentum': price_momentum,
+                                        'trend_strength': trend_strength,
+                                        'volume_trend': volume_trend,
+                                        'bollinger_upper': bb_upper,
+                                        'bollinger_lower': bb_lower,
+                                        'volatility': volatility
+                                    }
+
+                                    # Update current price if needed
+                                    if result.get('current_price') in [None, 0]:
+                                        result['current_price'] = current_price
+                                        result['target_price'] = current_price * (1 + result.get('expected_change_percent', 0) / 100)
+
+                                    logger.info(f"Enhanced technical indicators for {symbol}")
+
+                            except Exception as tech_error:
+                                logger.error(f"Error calculating technical indicators for {symbol}: {tech_error}")
+
+                    return result
                 except Exception as e:
                     logger.error(f"Fallback prediction failed for {symbol}: {e}")
                     return {"error": f"Unable to generate prediction for {symbol}"}
