@@ -3398,67 +3398,92 @@ def predict():
         data = request.get_json()
         logger.info(f"Request data: {data}")
 
-        symbol = data.get('symbol', '').strip().upper()
+        symbol = (data.get('symbol') or '').strip().upper()
         timeframe = data.get('timeframe', 'auto')
         logger.info(f"Processing symbol: {symbol}, timeframe: {timeframe}")
 
         if not symbol:
             return jsonify({"error": "Stock symbol is required"}), 400
 
-        # Get neural network prediction
-        prediction = predictor.predict_stock_movement(symbol, timeframe)
-        logger.info(f"Neural network prediction result: {prediction}")
+        # Get prediction from selected predictor (Kaggle wrapper with fallbacks)
+        raw = predictor.predict_stock_movement(symbol, timeframe)
+        logger.info(f"Raw prediction result: {raw}")
 
-        # Add enhanced reasoning using the backup predictor's reasoning functions
-        if 'error' not in prediction:
-            try:
-                # Create backup predictor instance for enhanced reasoning
-                backup_predictor = OriginalStockPredictor_BACKUP()
+        # Normalize response to guarantee all expected fields exist
+        def normalize(pred):
+            if not isinstance(pred, dict):
+                pred = {}
 
-                # Get stock data for enhanced reasoning
-                stock_data = {
-                    'symbol': symbol,
-                    'company_name': prediction.get('company_name', symbol),
-                    'sector': prediction.get('sector', 'Unknown'),
-                    'industry': prediction.get('industry', 'Unknown'),
-                    'market_cap': prediction.get('market_cap', 0),
-                    'current_price': prediction.get('current_price', 0),
-                    'volume': prediction.get('technical_indicators', {}).get('volume', 0)
-                }
+            # Base fields
+            out = {
+                'symbol': symbol,
+                'company_name': pred.get('company_name') or symbol,
+                'prediction': pred.get('prediction') or 'HOLD',
+                'confidence': float(pred.get('confidence') or 0),
+                'expected_change_percent': float(pred.get('expected_change_percent') or 0),
+                'current_price': float(pred.get('current_price') or 0),
+                'target_price': float(pred.get('target_price') or 0),
+                'timeframe': pred.get('timeframe') or '3-6 months',
+                'sector': pred.get('sector') or '',
+                'industry': pred.get('industry') or '',
+                'exchange': pred.get('exchange') or '',
+                'market_cap': int(pred.get('market_cap') or 0),
+                'is_penny_stock': bool(pred.get('is_penny_stock') if pred.get('is_penny_stock') is not None else (pred.get('current_price') or 0) < 5),
+                'stock_category': pred.get('stock_category') or '',
+                'analysis_date': pred.get('analysis_date') or datetime.now().strftime('%Y-%m-%d'),
+                'model_type': pred.get('model_type') or 'neural_fallback'
+            }
 
-                # Get technical indicators from neural network result
-                indicators = prediction.get('technical_indicators', {})
-                indicators['current_price'] = prediction.get('current_price', 0)
+            # Technical indicators
+            ti = pred.get('technical_indicators') or {}
+            out['technical_indicators'] = {
+                'current_price': out['current_price'],
+                'rsi': float(ti.get('rsi') or 50),
+                'sma_20': float(ti.get('sma_20') or out['current_price'] or 0),
+                'sma_50': float(ti.get('sma_50') or out['current_price'] or 0),
+                'macd': float(ti.get('macd') or 0),
+                'macd_signal': ti.get('macd_signal') or 'NEUTRAL',
+                'price_momentum': float(ti.get('price_momentum') or 0),
+                'trend_strength': float(ti.get('trend_strength') or 0),
+                'volume_trend': float(ti.get('volume_trend') or 0),
+                'bollinger_upper': float(ti.get('bollinger_upper') or 0),
+                'bollinger_lower': float(ti.get('bollinger_lower') or 0),
+                'volatility': float(ti.get('volatility') or 0),
+                'volume': int(ti.get('volume') or 0),
+            }
 
-                # Determine category
-                category = backup_predictor.get_stock_category(stock_data)
+            return out
 
-                # Calculate confidence for enhanced reasoning
-                confidence = prediction.get('confidence', 50) / 100.0
+        prediction = normalize(raw)
 
-                # Create prediction result for enhanced reasoning
-                prediction_result = {
-                    'prediction': prediction.get('prediction', 'HOLD'),
-                    'expected_change': prediction.get('expected_change_percent', 0),
-                    'target_price': prediction.get('target_price', 0),
-                    'reasoning': f"Neural network analysis indicates {prediction.get('prediction', 'HOLD')} recommendation",
-                    'confidence': confidence
-                }
-
-                # Generate enhanced reasoning
-                market_context = backup_predictor._get_current_market_context(symbol, stock_data['sector'], category)
-                enhanced_reasoning = backup_predictor._generate_enhanced_reasoning(
-                    stock_data, indicators, category, prediction_result, confidence
-                )
-
-                # Add enhanced reasoning to the prediction result
-                prediction['enhanced_reasoning'] = enhanced_reasoning
-
-                logger.info(f"Enhanced reasoning added with {len(enhanced_reasoning)} points")
-
-            except Exception as reasoning_error:
-                logger.error(f"Error generating enhanced reasoning: {reasoning_error}")
-                # Continue without enhanced reasoning if it fails
+        # Add enhanced reasoning (optional, never break response)
+        try:
+            backup_predictor = OriginalStockPredictor_BACKUP()
+            stock_data = {
+                'symbol': symbol,
+                'company_name': prediction['company_name'],
+                'sector': prediction['sector'] or 'Unknown',
+                'industry': prediction['industry'] or 'Unknown',
+                'market_cap': prediction['market_cap'],
+                'current_price': prediction['current_price'],
+                'volume': prediction['technical_indicators']['volume']
+            }
+            indicators = dict(prediction['technical_indicators'])
+            category = backup_predictor.get_stock_category(stock_data)
+            confidence01 = (prediction['confidence'] or 0) / 100.0
+            prediction_result = {
+                'prediction': prediction['prediction'],
+                'expected_change': prediction['expected_change_percent'],
+                'target_price': prediction['target_price'],
+                'reasoning': f"Neural network analysis indicates {prediction['prediction']} recommendation",
+                'confidence': confidence01
+            }
+            enhanced_reasoning = backup_predictor._generate_enhanced_reasoning(
+                stock_data, indicators, category, prediction_result, confidence01
+            )
+            prediction['enhanced_reasoning'] = enhanced_reasoning
+        except Exception as reasoning_error:
+            logger.error(f"Error generating enhanced reasoning: {reasoning_error}")
 
         return jsonify(prediction)
 
